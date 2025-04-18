@@ -1,0 +1,462 @@
+"use client"
+
+import { useState, useEffect, useRef } from "react"
+import { useChat } from "ai/react"
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Slider } from "@/components/ui/slider"
+import { Label } from "@/components/ui/label"
+import { CalendarIcon, Send } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { format } from "date-fns"
+
+// Define question types
+type QuestionType = "single-select" | "multi-select" | "number-range" | "date" | "text" | "long-text" | "email"
+
+interface Option {
+  id: string
+  label: string
+}
+
+interface Question {
+  id: string
+  text: string
+  type: QuestionType
+  options?: Option[]
+  min?: number
+  max?: number
+}
+
+// Sample questions for the form - duplicated from API for client-side use
+const formQuestions = [
+  {
+    id: "name",
+    text: "What's your name?",
+    type: "text" as QuestionType,
+  },
+  {
+    id: "email",
+    text: "What's your email address?",
+    type: "email" as QuestionType,
+  },
+  {
+    id: "experience",
+    text: "How many years of experience do you have?",
+    type: "number-range" as QuestionType,
+    min: 0,
+    max: 20,
+  },
+  {
+    id: "preferred_role",
+    text: "What role are you applying for?",
+    type: "single-select" as QuestionType,
+    options: [
+      { id: "developer", label: "Developer" },
+      { id: "designer", label: "Designer" },
+      { id: "product_manager", label: "Product Manager" },
+      { id: "marketing", label: "Marketing" },
+      { id: "other", label: "Other" },
+    ],
+  },
+  {
+    id: "skills",
+    text: "Which skills do you have? (Select all that apply)",
+    type: "multi-select" as QuestionType,
+    options: [
+      { id: "javascript", label: "JavaScript" },
+      { id: "typescript", label: "TypeScript" },
+      { id: "react", label: "React" },
+      { id: "nextjs", label: "Next.js" },
+      { id: "node", label: "Node.js" },
+      { id: "design", label: "UI/UX Design" },
+    ],
+  },
+  {
+    id: "start_date",
+    text: "When are you available to start?",
+    type: "date" as QuestionType,
+  },
+  {
+    id: "about",
+    text: "Tell us a bit about yourself and why you're interested in this position.",
+    type: "long-text" as QuestionType,
+  },
+]
+
+export default function ChatForm() {
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null)
+  const [formResponses, setFormResponses] = useState<Record<string, any>>({})
+  const [singleSelectValue, setSingleSelectValue] = useState<string>("")
+  const [multiSelectValue, setMultiSelectValue] = useState<string[]>([])
+  const [numberValue, setNumberValue] = useState<number[]>([5])
+  const [dateValue, setDateValue] = useState<Date | undefined>(undefined)
+  const [textValue, setTextValue] = useState<string>("")
+  const [emailValue, setEmailValue] = useState<string>("")
+  const [isFormComplete, setIsFormComplete] = useState<boolean>(false)
+
+  const { messages, input, handleInputChange, handleSubmit, append, isLoading } = useChat({
+    api: "/api/chat",
+    initialMessages: [
+      {
+        id: "welcome",
+        role: "assistant",
+        content:
+          "👋 Welcome to our interactive form! I'll guide you through a series of questions. Let's start with the first one: What's your name?",
+      },
+    ],
+    onFinish: (message) => {
+      // Parse the message to extract question information using the new format
+      try {
+        // Check for the new marker format
+        const questionMatch = message.content.match(/QUESTION_DATA:([^:]+):([^:]+)/)
+        if (questionMatch) {
+          const questionId = questionMatch[1]
+          const questionType = questionMatch[2]
+
+          // Find the question from our predefined list
+          const foundQuestion = formQuestions.find((q) => q.id === questionId)
+
+          if (foundQuestion) {
+            setCurrentQuestion(foundQuestion)
+          }
+        } else if (message.content.includes("FORM_COMPLETE")) {
+          setIsFormComplete(true)
+          setCurrentQuestion(null)
+        }
+      } catch (error) {
+        console.error("Failed to process question data:", error)
+      }
+    },
+  })
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
+    }
+  }, [messages])
+
+  // Handle form input submission
+  const submitFormInput = () => {
+    if (!currentQuestion) return
+
+    let value
+    let isValid = true
+
+    switch (currentQuestion.type) {
+      case "single-select":
+        value = singleSelectValue
+        isValid = !!value
+        break
+      case "multi-select":
+        value = multiSelectValue
+        isValid = multiSelectValue.length > 0
+        break
+      case "number-range":
+        value = numberValue[0]
+        isValid = true
+        break
+      case "date":
+        value = dateValue
+        isValid = !!dateValue
+        break
+      case "text":
+      case "long-text":
+        value = textValue
+        isValid = !!textValue.trim()
+        break
+      case "email":
+        value = emailValue
+        isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)
+        break
+    }
+
+    if (!isValid) {
+      // Show validation error
+      return
+    }
+
+    // Update form responses
+    const updatedResponses = { ...formResponses, [currentQuestion.id]: value }
+    setFormResponses(updatedResponses)
+
+    // Add user message
+    let displayValue = value
+    if (Array.isArray(value)) {
+      displayValue = value.join(", ")
+    } else if (value instanceof Date) {
+      displayValue = format(value, "PPP")
+    }
+
+    append({
+      role: "user",
+      content: String(displayValue),
+    })
+
+    // Reset input values
+    setSingleSelectValue("")
+    setMultiSelectValue([])
+    setNumberValue([5])
+    setDateValue(undefined)
+    setTextValue("")
+    setEmailValue("")
+
+    // Send the answer to the AI
+    append({
+      role: "system",
+      content: `User answered question ${currentQuestion.id} with: ${JSON.stringify(value)}. Continue with the next question or complete the form if all questions have been answered.`,
+    })
+  }
+
+  // Render the appropriate input component based on question type
+  const renderQuestionInput = () => {
+    if (!currentQuestion) return null
+
+    switch (currentQuestion.type) {
+      case "single-select":
+        return (
+          <RadioGroup value={singleSelectValue} onValueChange={setSingleSelectValue} className="space-y-2 mt-4">
+            {currentQuestion.options?.map((option) => (
+              <div key={option.id} className="flex items-center space-x-2">
+                <RadioGroupItem value={option.id} id={option.id} />
+                <Label htmlFor={option.id}>{option.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        )
+
+      case "multi-select":
+        return (
+          <div className="space-y-2 mt-4">
+            {currentQuestion.options?.map((option) => (
+              <div key={option.id} className="flex items-center space-x-2">
+                <Checkbox
+                  id={option.id}
+                  checked={multiSelectValue.includes(option.id)}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setMultiSelectValue([...multiSelectValue, option.id])
+                    } else {
+                      setMultiSelectValue(multiSelectValue.filter((id) => id !== option.id))
+                    }
+                  }}
+                />
+                <Label htmlFor={option.id}>{option.label}</Label>
+              </div>
+            ))}
+          </div>
+        )
+
+      case "number-range":
+        return (
+          <div className="space-y-4 mt-4">
+            <Slider
+              value={numberValue}
+              min={currentQuestion.min || 1}
+              max={currentQuestion.max || 10}
+              step={1}
+              onValueChange={setNumberValue}
+            />
+            <div className="flex justify-between">
+              <span>{currentQuestion.min || 1}</span>
+              <span className="font-bold">{numberValue[0]}</span>
+              <span>{currentQuestion.max || 10}</span>
+            </div>
+          </div>
+        )
+
+      case "date":
+        return (
+          <div className="mt-4">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn("w-full justify-start text-left font-normal", !dateValue && "text-muted-foreground")}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateValue ? format(dateValue, "PPP") : "Select a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar mode="single" selected={dateValue} onSelect={setDateValue} initialFocus />
+              </PopoverContent>
+            </Popover>
+          </div>
+        )
+
+      case "text":
+        return (
+          <Input
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
+            className="mt-4"
+            placeholder="Type your answer..."
+          />
+        )
+
+      case "long-text":
+        return (
+          <Textarea
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
+            className="mt-4"
+            placeholder="Type your answer..."
+            rows={4}
+          />
+        )
+
+      case "email":
+        return (
+          <Input
+            type="email"
+            value={emailValue}
+            onChange={(e) => setEmailValue(e.target.value)}
+            className="mt-4"
+            placeholder="your@email.com"
+          />
+        )
+    }
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-4">
+      <div className="flex-1 max-w-2xl mx-auto w-full pb-16">
+        <div className="space-y-4 mb-4">
+          {messages
+            .filter((m) => m.role !== "system")
+            .map((message) => {
+              // Remove any markers from the displayed message
+              const displayContent = message.content
+                .replace(/QUESTION_DATA:[^:]+:[^:]+/g, "")
+                .replace(/FORM_COMPLETE/g, "")
+                .trim()
+
+              return (
+                <div key={message.id} className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}>
+                  <div className="flex items-start gap-3 max-w-[80%]">
+                    {message.role !== "user" && (
+                      <Avatar>
+                        <AvatarFallback>AI</AvatarFallback>
+                        <AvatarImage src="/placeholder.svg?height=40&width=40" />
+                      </Avatar>
+                    )}
+                    <div
+                      className={cn(
+                        "rounded-lg px-4 py-2",
+                        message.role === "user" ? "bg-primary text-primary-foreground" : "bg-white shadow-sm",
+                      )}
+                    >
+                      {displayContent}
+                    </div>
+                    {message.role === "user" && (
+                      <Avatar>
+                        <AvatarFallback>U</AvatarFallback>
+                        <AvatarImage src="/placeholder.svg?height=40&width=40" />
+                      </Avatar>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {isLoading && (
+          <div className="flex justify-start mb-4">
+            <div className="flex items-center gap-3">
+              <Avatar>
+                <AvatarFallback>AI</AvatarFallback>
+                <AvatarImage src="/placeholder.svg?height=40&width=40" />
+              </Avatar>
+              <div className="bg-white shadow-sm rounded-lg px-4 py-2">
+                <div className="flex space-x-2">
+                  <div
+                    className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
+                    style={{ animationDelay: "0ms" }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
+                    style={{ animationDelay: "150ms" }}
+                  ></div>
+                  <div
+                    className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
+                    style={{ animationDelay: "300ms" }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isFormComplete ? (
+          <div className="fixed inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 z-50 flex flex-col items-center justify-center p-6">
+            <div className="w-full max-w-md text-center">
+              <div className="inline-flex h-20 w-20 items-center justify-center rounded-full bg-green-100 mx-auto mb-6">
+                <svg
+                  className="h-10 w-10 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                </svg>
+              </div>
+              <h2 className="text-3xl font-bold mb-4 text-gray-900">Form Completed!</h2>
+              <p className="text-gray-600 mb-8">
+                Thank you for submitting your information. Your application has been received and will be processed
+                shortly.
+              </p>
+
+              <Button size="lg" className="w-full mb-8" onClick={() => window.location.reload()}>
+                Start New Form
+              </Button>
+
+              <p className="text-sm text-gray-500 mt-auto">Powered by FormGenius</p>
+            </div>
+          </div>
+        ) : currentQuestion ? (
+          <div className="bg-white rounded-lg shadow-md p-4">
+            <h3 className="font-medium mb-2">{currentQuestion.text}</h3>
+            {renderQuestionInput()}
+            <Button className="mt-4 w-full" onClick={submitFormInput}>
+              Submit Answer
+            </Button>
+          </div>
+        ) : (
+          <></>
+        )}
+      </div>
+      <div className="fixed bottom-0 left-0 right-0 backdrop-blur-sm p-4 border-t border-gray-200 shadow-md">
+        <div className="max-w-2xl mx-auto w-full">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              handleSubmit(e)
+            }}
+            className="flex gap-2"
+          >
+            <Input
+              value={input}
+              onChange={handleInputChange}
+              placeholder="Type your message..."
+              disabled={isLoading}
+              className="flex-1"
+            />
+            <Button type="submit" disabled={isLoading || !input.trim()}>
+              <Send className="h-4 w-4" />
+            </Button>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}
