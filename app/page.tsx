@@ -12,7 +12,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Slider } from "@/components/ui/slider"
 import { Label } from "@/components/ui/label"
-import { CalendarIcon, Send } from "lucide-react"
+import { CalendarIcon, Send, ArrowRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 
@@ -100,6 +100,8 @@ export default function ChatForm() {
   const [textValue, setTextValue] = useState<string>("")
   const [emailValue, setEmailValue] = useState<string>("")
   const [isFormComplete, setIsFormComplete] = useState<boolean>(false)
+  const [progress, setProgress] = useState<number>(0)
+  const [showSplash, setShowSplash] = useState<boolean>(true)
 
   const { messages, input, handleInputChange, handleSubmit, append, isLoading } = useChat({
     api: "/api/chat",
@@ -125,10 +127,14 @@ export default function ChatForm() {
 
           if (foundQuestion) {
             setCurrentQuestion(foundQuestion)
+            // Update progress based on question index
+            const questionIndex = formQuestions.findIndex((q) => q.id === questionId)
+            setProgress((questionIndex / formQuestions.length) * 100)
           }
         } else if (message.content.includes("FORM_COMPLETE")) {
           setIsFormComplete(true)
           setCurrentQuestion(null)
+          setProgress(100) // Set progress to 100% when form is complete
         }
       } catch (error) {
         console.error("Failed to process question data:", error)
@@ -213,6 +219,11 @@ export default function ChatForm() {
       role: "system",
       content: `User answered question ${currentQuestion.id} with: ${JSON.stringify(value)}. Continue with the next question or complete the form if all questions have been answered.`,
     })
+
+    // Update progress for next question
+    const currentIndex = formQuestions.findIndex((q) => q.id === currentQuestion.id)
+    const nextProgress = ((currentIndex + 1) / formQuestions.length) * 100
+    setProgress(nextProgress)
   }
 
   // Render the appropriate input component based on question type
@@ -326,9 +337,54 @@ export default function ChatForm() {
     }
   }
 
+  // Splash screen component
+  const SplashScreen = () => (
+    <div className="fixed inset-0 bg-white flex flex-col items-center justify-center p-6 z-50">
+      <div className="w-full max-w-md text-center">
+        <div className="relative h-40 mb-8">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-20 bg-yellow-300 rotate-12 transform-gpu z-10"></div>
+          <div className="absolute top-6 right-1/3 w-24 h-16 bg-purple-200 -rotate-6 transform-gpu z-20"></div>
+          <div className="absolute top-16 left-1/3 w-28 h-16 bg-green-200 rotate-3 transform-gpu z-30"></div>
+        </div>
+
+        <h1 className="text-4xl font-bold mb-6 text-gray-900">Good afternoon!</h1>
+
+        <p className="text-gray-600 mb-12 text-lg max-w-md mx-auto">
+          Welcome! We're curious about your experience with AI tools for survey creation. Your insights will help us
+          improve these tools. Let's get started!
+        </p>
+
+        <Button
+          size="lg"
+          className="px-8 py-6 rounded-full bg-black hover:bg-gray-800 text-white"
+          onClick={() => setShowSplash(false)}
+        >
+          Get Started <ArrowRight className="ml-2 h-5 w-5" />
+        </Button>
+      </div>
+    </div>
+  )
+
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 p-4">
-      <div className="flex-1 max-w-2xl mx-auto w-full pb-16">
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      {/* Show splash screen if showSplash is true */}
+      {showSplash && <SplashScreen />}
+
+      {/* Progress bar */}
+      {!showSplash && (
+        <div className="fixed top-0 left-0 right-0 h-1 bg-gray-200 z-50">
+          <div
+            className="h-full bg-green-500 transition-all duration-500 ease-in-out"
+            style={{ width: `${progress}%` }}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progress}
+            role="progressbar"
+          ></div>
+        </div>
+      )}
+
+      <div className="flex-1 max-w-2xl mx-auto w-full pb-16 p-4">
         <div className="space-y-4 mb-4">
           {messages
             .filter((m) => m.role !== "system")
@@ -435,28 +491,30 @@ export default function ChatForm() {
           <></>
         )}
       </div>
-      <div className="fixed bottom-0 left-0 right-0 backdrop-blur-sm p-4 border-t border-gray-200 shadow-md">
-        <div className="max-w-2xl mx-auto w-full">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              handleSubmit(e)
-            }}
-            className="flex gap-2"
-          >
-            <Input
-              value={input}
-              onChange={handleInputChange}
-              placeholder="Type your message..."
-              disabled={isLoading}
-              className="flex-1"
-            />
-            <Button type="submit" disabled={isLoading || !input.trim()}>
-              <Send className="h-4 w-4" />
-            </Button>
-          </form>
+      {!showSplash && (
+        <div className="fixed bottom-0 left-0 right-0 backdrop-blur-sm p-4 border-t border-gray-200 shadow-md">
+          <div className="max-w-2xl mx-auto w-full">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                handleSubmit(e)
+              }}
+              className="flex gap-2"
+            >
+              <Input
+                value={input}
+                onChange={handleInputChange}
+                placeholder="Type your message..."
+                disabled={isLoading}
+                className="flex-1"
+              />
+              <Button type="submit" disabled={isLoading || !input.trim()}>
+                <Send className="h-4 w-4" />
+              </Button>
+            </form>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
