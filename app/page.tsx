@@ -1,36 +1,47 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import { useChat } from "ai/react"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Slider } from "@/components/ui/slider"
-import { Label } from "@/components/ui/label"
-import { CalendarIcon, Send, ArrowRight } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { format } from "date-fns"
+import { useState, useEffect, useRef } from "react";
+import { useChat } from "ai/react";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
+import { CalendarIcon, Send, ArrowRight } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 // Define question types
-type QuestionType = "single-select" | "multi-select" | "number-range" | "date" | "text" | "long-text" | "email"
+type QuestionType =
+  | "single-select"
+  | "multi-select"
+  | "number-range"
+  | "date"
+  | "text"
+  | "long-text"
+  | "email";
 
 interface Option {
-  id: string
-  label: string
+  id: string;
+  label: string;
 }
 
 interface Question {
-  id: string
-  text: string
-  type: QuestionType
-  options?: Option[]
-  min?: number
-  max?: number
+  id: string;
+  text: string;
+  type: QuestionType;
+  options?: Option[];
+  min?: number;
+  max?: number;
 }
 
 // Sample questions for the form - duplicated from API for client-side use
@@ -87,23 +98,34 @@ const formQuestions = [
     text: "Tell us a bit about yourself and why you're interested in this position.",
     type: "long-text" as QuestionType,
   },
-]
+];
 
 export default function ChatForm() {
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null)
-  const [formResponses, setFormResponses] = useState<Record<string, any>>({})
-  const [singleSelectValue, setSingleSelectValue] = useState<string>("")
-  const [multiSelectValue, setMultiSelectValue] = useState<string[]>([])
-  const [numberValue, setNumberValue] = useState<number[]>([5])
-  const [dateValue, setDateValue] = useState<Date | undefined>(undefined)
-  const [textValue, setTextValue] = useState<string>("")
-  const [emailValue, setEmailValue] = useState<string>("")
-  const [isFormComplete, setIsFormComplete] = useState<boolean>(false)
-  const [progress, setProgress] = useState<number>(0)
-  const [showSplash, setShowSplash] = useState<boolean>(true)
-
-  const { messages, input, handleInputChange, handleSubmit, append, isLoading } = useChat({
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
+  const [formResponses, setFormResponses] = useState<Record<string, any>>({});
+  const [singleSelectValue, setSingleSelectValue] = useState<string>("");
+  const [multiSelectValue, setMultiSelectValue] = useState<string[]>([]);
+  const [numberValue, setNumberValue] = useState<number[]>([5]);
+  const [dateValue, setDateValue] = useState<Date | undefined>(undefined);
+  const [textValue, setTextValue] = useState<string>("");
+  const [emailValue, setEmailValue] = useState<string>("");
+  const [isFormComplete, setIsFormComplete] = useState<boolean>(false);
+  const [progress, setProgress] = useState<number>(0);
+  const [showSplash, setShowSplash] = useState<boolean>(true);
+  const [validationErrors, setValidationErrors] = useState<{
+    email: string | null;
+  }>({
+    email: null,
+  });
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    append,
+    isLoading,
+  } = useChat({
     api: "/api/chat",
     initialMessages: [
       {
@@ -117,123 +139,149 @@ export default function ChatForm() {
       // Parse the message to extract question information using the new format
       try {
         // Check for the new marker format
-        const questionMatch = message.content.match(/QUESTION_DATA:([^:]+):([^:]+)/)
+        const questionMatch = message.content.match(
+          /QUESTION_DATA:([^:]+):([^:]+)/
+        );
         if (questionMatch) {
-          const questionId = questionMatch[1]
-          const questionType = questionMatch[2]
+          const questionId = questionMatch[1];
+          const questionType = questionMatch[2];
 
           // Find the question from our predefined list
-          const foundQuestion = formQuestions.find((q) => q.id === questionId)
+          const foundQuestion = formQuestions.find((q) => q.id === questionId);
 
           if (foundQuestion) {
-            setCurrentQuestion(foundQuestion)
+            setCurrentQuestion(foundQuestion);
             // Update progress based on question index
-            const questionIndex = formQuestions.findIndex((q) => q.id === questionId)
-            setProgress((questionIndex / formQuestions.length) * 100)
+            const questionIndex = formQuestions.findIndex(
+              (q) => q.id === questionId
+            );
+            setProgress((questionIndex / formQuestions.length) * 100);
           }
         } else if (message.content.includes("FORM_COMPLETE")) {
-          setIsFormComplete(true)
-          setCurrentQuestion(null)
-          setProgress(100) // Set progress to 100% when form is complete
+          setIsFormComplete(true);
+          setCurrentQuestion(null);
+          setProgress(100); // Set progress to 100% when form is complete
         }
       } catch (error) {
-        console.error("Failed to process question data:", error)
+        console.error("Failed to process question data:", error);
       }
     },
-  })
+  });
 
   // Scroll to bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages])
+  }, [messages]);
 
   // Handle form input submission
   const submitFormInput = () => {
-    if (!currentQuestion) return
+    console.log("Submitting form input...");
+    if (!currentQuestion) return;
 
-    let value
-    let isValid = true
+    let value;
+    let isValid = true;
 
     switch (currentQuestion.type) {
       case "single-select":
-        value = singleSelectValue
-        isValid = !!value
-        break
+        value = singleSelectValue;
+        isValid = !!value;
+        break;
       case "multi-select":
-        value = multiSelectValue
-        isValid = multiSelectValue.length > 0
-        break
+        value = multiSelectValue;
+        isValid = multiSelectValue.length > 0;
+        break;
       case "number-range":
-        value = numberValue[0]
-        isValid = true
-        break
+        value = numberValue[0];
+        isValid = true;
+        break;
       case "date":
-        value = dateValue
-        isValid = !!dateValue
-        break
+        value = dateValue;
+        isValid = !!dateValue;
+        break;
       case "text":
       case "long-text":
-        value = textValue
-        isValid = !!textValue.trim()
-        break
+        value = textValue;
+        isValid = !!textValue.trim();
+        break;
       case "email":
-        value = emailValue
-        isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)
-        break
+        value = emailValue;
+        isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue);
+        if (!isValid) {
+          setValidationErrors((prev) => ({
+            ...prev,
+            email: "Please enter a valid email address.",
+          }));
+        } else {
+          setValidationErrors((prev) => ({
+            ...prev,
+            email: null,
+          }));
+        }
+        break;
     }
 
     if (!isValid) {
       // Show validation error
-      return
+      return;
     }
 
     // Update form responses
-    const updatedResponses = { ...formResponses, [currentQuestion.id]: value }
-    setFormResponses(updatedResponses)
+    const updatedResponses = { ...formResponses, [currentQuestion.id]: value };
+    setFormResponses(updatedResponses);
 
     // Add user message
-    let displayValue = value
+    let displayValue = value;
     if (Array.isArray(value)) {
-      displayValue = value.join(", ")
+      displayValue = value.join(", ");
     } else if (value instanceof Date) {
-      displayValue = format(value, "PPP")
+      displayValue = format(value, "PPP");
     }
 
     append({
       role: "user",
       content: String(displayValue),
-    })
+    });
 
     // Reset input values
-    setSingleSelectValue("")
-    setMultiSelectValue([])
-    setNumberValue([5])
-    setDateValue(undefined)
-    setTextValue("")
-    setEmailValue("")
+    setSingleSelectValue("");
+    setMultiSelectValue([]);
+    setNumberValue([5]);
+    setDateValue(undefined);
+    setTextValue("");
+    setEmailValue("");
 
     // Send the answer to the AI
     append({
       role: "system",
-      content: `User answered question ${currentQuestion.id} with: ${JSON.stringify(value)}. Continue with the next question or complete the form if all questions have been answered.`,
-    })
+      content: `User answered question ${
+        currentQuestion.id
+      } with: ${JSON.stringify(
+        value
+      )}. Continue with the next question or complete the form if all questions have been answered.`,
+    });
 
     // Update progress for next question
-    const currentIndex = formQuestions.findIndex((q) => q.id === currentQuestion.id)
-    const nextProgress = ((currentIndex + 1) / formQuestions.length) * 100
-    setProgress(nextProgress)
-  }
+    const currentIndex = formQuestions.findIndex(
+      (q) => q.id === currentQuestion.id
+    );
+    const nextProgress = ((currentIndex + 1) / formQuestions.length) * 100;
+    setProgress(nextProgress);
+  };
 
   // Render the appropriate input component based on question type
   const renderQuestionInput = () => {
-    if (!currentQuestion) return null
+    if (!currentQuestion) return null;
 
     switch (currentQuestion.type) {
       case "single-select":
         return (
-          <RadioGroup value={singleSelectValue} onValueChange={setSingleSelectValue} className="space-y-2 mt-4">
+          <RadioGroup
+            value={singleSelectValue}
+            onValueChange={setSingleSelectValue}
+            className="space-y-2 mt-4"
+          >
             {currentQuestion.options?.map((option) => (
               <div key={option.id} className="flex items-center space-x-2">
                 <RadioGroupItem value={option.id} id={option.id} />
@@ -241,7 +289,7 @@ export default function ChatForm() {
               </div>
             ))}
           </RadioGroup>
-        )
+        );
 
       case "multi-select":
         return (
@@ -253,9 +301,11 @@ export default function ChatForm() {
                   checked={multiSelectValue.includes(option.id)}
                   onCheckedChange={(checked) => {
                     if (checked) {
-                      setMultiSelectValue([...multiSelectValue, option.id])
+                      setMultiSelectValue([...multiSelectValue, option.id]);
                     } else {
-                      setMultiSelectValue(multiSelectValue.filter((id) => id !== option.id))
+                      setMultiSelectValue(
+                        multiSelectValue.filter((id) => id !== option.id)
+                      );
                     }
                   }}
                 />
@@ -263,7 +313,7 @@ export default function ChatForm() {
               </div>
             ))}
           </div>
-        )
+        );
 
       case "number-range":
         return (
@@ -281,7 +331,7 @@ export default function ChatForm() {
               <span>{currentQuestion.max || 10}</span>
             </div>
           </div>
-        )
+        );
 
       case "date":
         return (
@@ -290,18 +340,26 @@ export default function ChatForm() {
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className={cn("w-full justify-start text-left font-normal", !dateValue && "text-muted-foreground")}
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !dateValue && "text-muted-foreground"
+                  )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {dateValue ? format(dateValue, "PPP") : "Select a date"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
-                <Calendar mode="single" selected={dateValue} onSelect={setDateValue} initialFocus />
+                <Calendar
+                  mode="single"
+                  selected={dateValue}
+                  onSelect={setDateValue}
+                  initialFocus
+                />
               </PopoverContent>
             </Popover>
           </div>
-        )
+        );
 
       case "text":
         return (
@@ -311,7 +369,7 @@ export default function ChatForm() {
             className="mt-4"
             placeholder="Type your answer..."
           />
-        )
+        );
 
       case "long-text":
         return (
@@ -322,20 +380,27 @@ export default function ChatForm() {
             placeholder="Type your answer..."
             rows={4}
           />
-        )
+        );
 
       case "email":
         return (
-          <Input
-            type="email"
-            value={emailValue}
-            onChange={(e) => setEmailValue(e.target.value)}
-            className="mt-4"
-            placeholder="your@email.com"
-          />
-        )
+          <>
+            <Input
+              type="email"
+              value={emailValue}
+              onChange={(e) => setEmailValue(e.target.value)}
+              className="mt-4"
+              placeholder="your@email.com"
+            />
+            {validationErrors.email && (
+              <p className="text-red-500 text-sm mt-2">
+                {validationErrors.email}
+              </p>
+            )}
+          </>
+        );
     }
-  }
+  };
 
   // Splash screen component
   const SplashScreen = () => (
@@ -347,11 +412,14 @@ export default function ChatForm() {
           <div className="absolute top-16 left-1/3 w-28 h-16 bg-green-200 rotate-3 transform-gpu z-30"></div>
         </div>
 
-        <h1 className="text-4xl font-bold mb-6 text-gray-900">Good afternoon!</h1>
+        <h1 className="text-4xl font-bold mb-6 text-gray-900">
+          Good afternoon!
+        </h1>
 
         <p className="text-gray-600 mb-12 text-lg max-w-md mx-auto">
-          Welcome! We're curious about your experience with AI tools for survey creation. Your insights will help us
-          improve these tools. Let's get started!
+          Welcome! We're curious about your experience with AI tools for survey
+          creation. Your insights will help us improve these tools. Let's get
+          started!
         </p>
 
         <Button
@@ -363,7 +431,7 @@ export default function ChatForm() {
         </Button>
       </div>
     </div>
-  )
+  );
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
@@ -393,10 +461,16 @@ export default function ChatForm() {
               const displayContent = message.content
                 .replace(/QUESTION_DATA:[^:]+:[^:]+/g, "")
                 .replace(/FORM_COMPLETE/g, "")
-                .trim()
+                .trim();
 
               return (
-                <div key={message.id} className={cn("flex", message.role === "user" ? "justify-end" : "justify-start")}>
+                <div
+                  key={message.id}
+                  className={cn(
+                    "flex",
+                    message.role === "user" ? "justify-end" : "justify-start"
+                  )}
+                >
                   <div className="flex items-start gap-3 max-w-[80%]">
                     {message.role !== "user" && (
                       <Avatar>
@@ -407,7 +481,9 @@ export default function ChatForm() {
                     <div
                       className={cn(
                         "rounded-lg px-4 py-2",
-                        message.role === "user" ? "bg-primary text-primary-foreground" : "bg-white shadow-sm",
+                        message.role === "user"
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-white shadow-sm"
                       )}
                     >
                       {displayContent}
@@ -420,7 +496,7 @@ export default function ChatForm() {
                     )}
                   </div>
                 </div>
-              )
+              );
             })}
           <div ref={messagesEndRef} />
         </div>
@@ -463,20 +539,33 @@ export default function ChatForm() {
                   viewBox="0 0 24 24"
                   xmlns="http://www.w3.org/2000/svg"
                 >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M5 13l4 4L19 7"
+                  ></path>
                 </svg>
               </div>
-              <h2 className="text-3xl font-bold mb-4 text-gray-900">Form Completed!</h2>
+              <h2 className="text-3xl font-bold mb-4 text-gray-900">
+                Form Completed!
+              </h2>
               <p className="text-gray-600 mb-8">
-                Thank you for submitting your information. Your application has been received and will be processed
-                shortly.
+                Thank you for submitting your information. Your application has
+                been received and will be processed shortly.
               </p>
 
-              <Button size="lg" className="w-full mb-8" onClick={() => window.location.reload()}>
+              <Button
+                size="lg"
+                className="w-full mb-8"
+                onClick={() => window.location.reload()}
+              >
                 Start New Form
               </Button>
 
-              <p className="text-sm text-gray-500 mt-auto">Powered by FormGenius</p>
+              <p className="text-sm text-gray-500 mt-auto">
+                Powered by FormGenius
+              </p>
             </div>
           </div>
         ) : currentQuestion ? (
@@ -496,8 +585,8 @@ export default function ChatForm() {
           <div className="max-w-2xl mx-auto w-full">
             <form
               onSubmit={(e) => {
-                e.preventDefault()
-                handleSubmit(e)
+                e.preventDefault();
+                handleSubmit(e);
               }}
               className="flex gap-2"
             >
@@ -516,5 +605,6 @@ export default function ChatForm() {
         </div>
       )}
     </div>
-  )
+  );
 }
+``;
