@@ -535,6 +535,20 @@ export default function ChatForm() {
     </div>
   );
 
+  const checkIfDisabled = () => {
+    if (
+      isLoading ||
+      currentQuestion?.type === "date" ||
+      currentQuestion?.type === "multi-select" ||
+      currentQuestion?.type === "single-select" ||
+      currentQuestion?.type === "number-range"
+    ) {
+      return true;
+    }
+
+    return false;
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Show splash screen if showSplash is true */}
@@ -696,10 +710,13 @@ export default function ChatForm() {
                 value={input}
                 onChange={handleInputChange}
                 placeholder="Type your message..."
-                disabled={isLoading}
+                disabled={checkIfDisabled()}
                 className="flex-1"
               />
-              <Button type="submit" disabled={isLoading || !input.trim()}>
+              <Button
+                type="submit"
+                disabled={checkIfDisabled() || !input.trim()}
+              >
                 <Send className="h-4 w-4" />
               </Button>
             </form>
