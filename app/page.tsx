@@ -115,8 +115,18 @@ export default function ChatForm() {
   const [showSplash, setShowSplash] = useState<boolean>(true);
   const [validationErrors, setValidationErrors] = useState<{
     email: string | null;
+    singleSelect: string | null;
+    multiSelect: string | null;
+    date: string | null;
+    text: string | null;
+    longText: string | null;
   }>({
     email: null,
+    singleSelect: null,
+    multiSelect: null,
+    date: null,
+    text: null,
+    longText: null,
   });
   const {
     messages,
@@ -187,10 +197,32 @@ export default function ChatForm() {
       case "single-select":
         value = singleSelectValue;
         isValid = !!value;
+        if (!isValid) {
+          setValidationErrors((prev) => ({
+            ...prev,
+            singleSelect: "Please select an option.",
+          }));
+        } else {
+          setValidationErrors((prev) => ({
+            ...prev,
+            singleSelect: null,
+          }));
+        }
         break;
       case "multi-select":
         value = multiSelectValue;
         isValid = multiSelectValue.length > 0;
+        if (!isValid) {
+          setValidationErrors((prev) => ({
+            ...prev,
+            multiSelect: "Please select at least one option.",
+          }));
+        } else {
+          setValidationErrors((prev) => ({
+            ...prev,
+            multiSelect: null,
+          }));
+        }
         break;
       case "number-range":
         value = numberValue[0];
@@ -199,11 +231,50 @@ export default function ChatForm() {
       case "date":
         value = dateValue;
         isValid = !!dateValue;
+        if (!isValid) {
+          setValidationErrors((prev) => ({
+            ...prev,
+            date: "Please select a date.",
+          }));
+        } else {
+          setValidationErrors((prev) => ({
+            ...prev,
+            date: null,
+          }));
+        }
         break;
       case "text":
-      case "long-text":
         value = textValue;
         isValid = !!textValue.trim();
+        if (!isValid) {
+          setValidationErrors((prev) => ({
+            ...prev,
+            text: "This field is required.",
+          }));
+        } else {
+          setValidationErrors((prev) => ({
+            ...prev,
+            text: null,
+          }));
+        }
+        break;
+
+      case "long-text":
+        value = textValue;
+        isValid = textValue.trim().length >= 10;
+        if (!isValid) {
+          setValidationErrors((prev) => ({
+            ...prev,
+            longText: textValue.trim()
+              ? "Please enter at least 10 characters."
+              : "This field is required.",
+          }));
+        } else {
+          setValidationErrors((prev) => ({
+            ...prev,
+            longText: null,
+          }));
+        }
         break;
       case "email":
         value = emailValue;
@@ -277,18 +348,25 @@ export default function ChatForm() {
     switch (currentQuestion.type) {
       case "single-select":
         return (
-          <RadioGroup
-            value={singleSelectValue}
-            onValueChange={setSingleSelectValue}
-            className="space-y-2 mt-4"
-          >
-            {currentQuestion.options?.map((option) => (
-              <div key={option.id} className="flex items-center space-x-2">
-                <RadioGroupItem value={option.id} id={option.id} />
-                <Label htmlFor={option.id}>{option.label}</Label>
-              </div>
-            ))}
-          </RadioGroup>
+          <>
+            <RadioGroup
+              value={singleSelectValue}
+              onValueChange={setSingleSelectValue}
+              className="space-y-2 mt-4"
+            >
+              {currentQuestion.options?.map((option) => (
+                <div key={option.id} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option.id} id={option.id} />
+                  <Label htmlFor={option.id}>{option.label}</Label>
+                </div>
+              ))}
+            </RadioGroup>
+            {validationErrors.singleSelect && (
+              <p className="text-red-500 text-sm mt-2">
+                {validationErrors.singleSelect}
+              </p>
+            )}
+          </>
         );
 
       case "multi-select":
@@ -312,6 +390,11 @@ export default function ChatForm() {
                 <Label htmlFor={option.id}>{option.label}</Label>
               </div>
             ))}
+            {validationErrors.multiSelect && (
+              <p className="text-red-500 text-sm mt-2">
+                {validationErrors.multiSelect}
+              </p>
+            )}
           </div>
         );
 
@@ -358,28 +441,47 @@ export default function ChatForm() {
                 />
               </PopoverContent>
             </Popover>
+            {validationErrors.date && (
+              <p className="text-red-500 text-sm mt-2">
+                {validationErrors.date}
+              </p>
+            )}
           </div>
         );
 
       case "text":
         return (
-          <Input
-            value={textValue}
-            onChange={(e) => setTextValue(e.target.value)}
-            className="mt-4"
-            placeholder="Type your answer..."
-          />
+          <>
+            <Input
+              value={textValue}
+              onChange={(e) => setTextValue(e.target.value)}
+              className="mt-4"
+              placeholder="Type your answer..."
+            />
+            {validationErrors.text && (
+              <p className="text-red-500 text-sm mt-2">
+                {validationErrors.text}
+              </p>
+            )}
+          </>
         );
 
       case "long-text":
         return (
-          <Textarea
-            value={textValue}
-            onChange={(e) => setTextValue(e.target.value)}
-            className="mt-4"
-            placeholder="Type your answer..."
-            rows={4}
-          />
+          <>
+            <Textarea
+              value={textValue}
+              onChange={(e) => setTextValue(e.target.value)}
+              className="mt-4"
+              placeholder="Type your answer..."
+              rows={4}
+            />
+            {validationErrors.longText && (
+              <p className="text-red-500 text-sm mt-2">
+                {validationErrors.longText}
+              </p>
+            )}
+          </>
         );
 
       case "email":
