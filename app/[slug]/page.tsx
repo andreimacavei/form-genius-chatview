@@ -113,60 +113,7 @@ export default function ChatForm() {
   const [isFormComplete, setIsFormComplete] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [showSplash, setShowSplash] = useState<boolean>(true);
-  const [formQuestions, setFormQuestions] = useState([
-    // {
-    //   id: "name",
-    //   text: "What's your name?",
-    //   type: "text" as QuestionType,
-    // },
-    // {
-    //   id: "email",
-    //   text: "What's your email address?",
-    //   type: "email" as QuestionType,
-    // },
-    // {
-    //   id: "experience",
-    //   text: "How many years of experience do you have?",
-    //   type: "number-range" as QuestionType,
-    //   min: 0,
-    //   max: 20,
-    // },
-    // {
-    //   id: "preferred_role",
-    //   text: "What role are you applying for?",
-    //   type: "single-select" as QuestionType,
-    //   options: [
-    //     { id: "developer", label: "Developer" },
-    //     { id: "designer", label: "Designer" },
-    //     { id: "product_manager", label: "Product Manager" },
-    //     { id: "marketing", label: "Marketing" },
-    //     { id: "other", label: "Other" },
-    //   ],
-    // },
-    // {
-    //   id: "skills",
-    //   text: "Which skills do you have? (Select all that apply)",
-    //   type: "multi-select" as QuestionType,
-    //   options: [
-    //     { id: "javascript", label: "JavaScript" },
-    //     { id: "typescript", label: "TypeScript" },
-    //     { id: "react", label: "React" },
-    //     { id: "nextjs", label: "Next.js" },
-    //     { id: "node", label: "Node.js" },
-    //     { id: "design", label: "UI/UX Design" },
-    //   ],
-    // },
-    // {
-    //   id: "start_date",
-    //   text: "When are you available to start?",
-    //   type: "date" as QuestionType,
-    // },
-    // {
-    //   id: "about",
-    //   text: "Tell us a bit about yourself and why you're interested in this position.",
-    //   type: "long-text" as QuestionType,
-    // },
-  ]);
+  const [formQuestions, setFormQuestions] = useState([]);
 
   const [validationErrors, setValidationErrors] = useState<{
     email: string | null;
@@ -213,7 +160,7 @@ export default function ChatForm() {
 
           // Find the question from our predefined list
           const foundQuestion = formQuestions.find((q) => q.id === questionId);
-
+          console.log(formQuestions, "FORM QUESTIONS");
           if (foundQuestion) {
             setCurrentQuestion(foundQuestion);
             // Update progress based on question index
@@ -233,13 +180,13 @@ export default function ChatForm() {
     },
   });
 
-  // Scroll to bottom when messages change
-  // Scroll to bottom when messages change
-  //   useEffect(() => {
-  //     if (messagesEndRef.current) {
-  //       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-  //     }
-  //   }, [messages]);
+  //   Scroll to bottom when messages change
+  //   Scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
 
   //   Fetch survey questions based on slug
   const params = useParams();
@@ -252,10 +199,13 @@ export default function ChatForm() {
         console.log("Response:", response);
         if (response.ok) {
           const data = await response.json();
-          if (data.surveyQuestions) {
-            setFormQuestions(data.surveyQuestions);
+          console.log("Data:", data);
+          if (data.response.survey_questions) {
+            setFormQuestions(data.response.survey_questions);
+            // console.log("Survey Questions:", data.response.survey_questions);
           }
         }
+        // console.log("Survey Questions:", formQuestions);
       } catch (error) {
         console.error("Failed to fetch survey questions:", error);
       }

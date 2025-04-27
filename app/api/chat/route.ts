@@ -5,60 +5,60 @@ import { streamText } from "ai";
 export const maxDuration = 30;
 
 // Sample questions for the form
-const formQuestions = [
-  {
-    id: "name",
-    text: "What's your name?",
-    type: "text",
-  },
-  {
-    id: "email",
-    text: "What's your email address?",
-    type: "email",
-  },
-  {
-    id: "experience",
-    text: "How many years of experience do you have?",
-    type: "number-range",
-    min: 0,
-    max: 20,
-  },
-  {
-    id: "preferred_role",
-    text: "What role are you applying for?",
-    type: "single-select",
-    options: [
-      { id: "developer", label: "Developer" },
-      { id: "designer", label: "Designer" },
-      { id: "product_manager", label: "Product Manager" },
-      { id: "marketing", label: "Marketing" },
-      { id: "other", label: "Other" },
-    ],
-  },
-  {
-    id: "skills",
-    text: "Which skills do you have? (Select all that apply)",
-    type: "multi-select",
-    options: [
-      { id: "javascript", label: "JavaScript" },
-      { id: "typescript", label: "TypeScript" },
-      { id: "react", label: "React" },
-      { id: "nextjs", label: "Next.js" },
-      { id: "node", label: "Node.js" },
-      { id: "design", label: "UI/UX Design" },
-    ],
-  },
-  {
-    id: "start_date",
-    text: "When are you available to start?",
-    type: "date",
-  },
-  {
-    id: "about",
-    text: "Tell us a bit about yourself and why you're interested in this position.",
-    type: "long-text",
-  },
-];
+// const formQuestions = [
+//   {
+//     id: "name",
+//     text: "What's your name?",
+//     type: "text",
+//   },
+//   {
+//     id: "email",
+//     text: "What's your email address?",
+//     type: "email",
+//   },
+//   {
+//     id: "experience",
+//     text: "How many years of experience do you have?",
+//     type: "number-range",
+//     min: 0,
+//     max: 20,
+//   },
+//   {
+//     id: "preferred_role",
+//     text: "What role are you applying for?",
+//     type: "single-select",
+//     options: [
+//       { id: "developer", label: "Developer" },
+//       { id: "designer", label: "Designer" },
+//       { id: "product_manager", label: "Product Manager" },
+//       { id: "marketing", label: "Marketing" },
+//       { id: "other", label: "Other" },
+//     ],
+//   },
+//   {
+//     id: "skills",
+//     text: "Which skills do you have? (Select all that apply)",
+//     type: "multi-select",
+//     options: [
+//       { id: "javascript", label: "JavaScript" },
+//       { id: "typescript", label: "TypeScript" },
+//       { id: "react", label: "React" },
+//       { id: "nextjs", label: "Next.js" },
+//       { id: "node", label: "Node.js" },
+//       { id: "design", label: "UI/UX Design" },
+//     ],
+//   },
+//   {
+//     id: "start_date",
+//     text: "When are you available to start?",
+//     type: "date",
+//   },
+//   {
+//     id: "about",
+//     text: "Tell us a bit about yourself and why you're interested in this position.",
+//     type: "long-text",
+//   },
+// ];
 
 export async function POST(req: Request) {
   const { messages } = await req.json();

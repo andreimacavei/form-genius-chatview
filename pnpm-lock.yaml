@@ -3,6 +3,7 @@ lockfileVersion: 5.4
 specifiers:
   '@ai-sdk/groq': latest
   '@hookform/resolvers': ^3.9.1
+  '@prisma/client': ^6.6.0
   '@radix-ui/react-accordion': ^1.2.2
   '@radix-ui/react-alert-dialog': ^1.1.4
   '@radix-ui/react-aspect-ratio': ^1.1.1
@@ -62,6 +63,7 @@ specifiers:
 dependencies:
   '@ai-sdk/groq': 1.2.8_zod@3.24.3
   '@hookform/resolvers': 3.10.0_react-hook-form@7.56.1
+  '@prisma/client': 6.6.0_6tku7544pooavsl5fzhziwt7pi
   '@radix-ui/react-accordion': 1.2.8_5j5q5giq4a6q5rwe55huzqxn5e
   '@radix-ui/react-alert-dialog': 1.1.11_5j5q5giq4a6q5rwe55huzqxn5e
   '@radix-ui/react-aspect-ratio': 1.1.4_5j5q5giq4a6q5rwe55huzqxn5e
@@ -786,6 +788,23 @@ packages:
     engines: {node: '>=14'}
     requiresBuild: true
     optional: true
+
+  /@prisma/client/6.6.0_6tku7544pooavsl5fzhziwt7pi:
+    resolution: {integrity: sha512-vfp73YT/BHsWWOAuthKQ/1lBgESSqYqAWZEYyTdGXyFAHpmewwWL2Iz6ErIzkj4aHbuc6/cGSsE6ZY+pBO04Cg==}
+    engines: {node: '>=18.18'}
+    requiresBuild: true
+    peerDependencies:
+      prisma: '*'
+      typescript: '>=5.1.0'
+    peerDependenciesMeta:
+      prisma:
+        optional: true
+      typescript:
+        optional: true
+    dependencies:
+      prisma: 6.6.0_typescript@5.8.3
+      typescript: 5.8.3
+    dev: false
 
   /@prisma/config/6.6.0:
     resolution: {integrity: sha512-d8FlXRHsx72RbN8nA2QCRORNv5AcUnPXgtPvwhXmYkQSMF/j9cKaJg+9VcUzBRXGy9QBckNzEQDEJZdEOZ+ubA==}
