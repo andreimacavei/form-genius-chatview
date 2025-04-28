@@ -5,7 +5,7 @@ import { streamText } from "ai";
 export const maxDuration = 30;
 
 // Sample questions for the form
-const formQuestions = [
+const formQuestionsArray = [
   {
     id: "name",
     text: "What's your name?",
@@ -61,8 +61,10 @@ const formQuestions = [
 ];
 
 export async function POST(req: Request) {
-  const { messages } = await req.json();
-
+  const { messages, questions } = await req.json();
+  console.log("Received messages:", messages);
+  // Use questions from the request instead of the hardcoded ones
+  const formQuestions = questions || formQuestionsArray;
   // Track which question we're on based on the number of user responses
   const userMessageCount = messages.filter((m) => m.role === "user").length;
 
@@ -73,12 +75,11 @@ export async function POST(req: Request) {
     // Use a simpler marker format to avoid JSON parsing issues
     systemPrompt = `You are a friendly form assistant. Your job is to guide the user through a form one question at a time.
     
-The current question is: "${currentQuestion.text}"
+The current question is: "${currentQuestion.title}"
 
 After acknowledging the user's previous answer (if any), ask this question in a conversational way.
-At the end of your message, include this exact marker: QUESTION_DATA:${currentQuestion.id}:${currentQuestion.type}
 
-Keep your responses brief and friendly. Don't mention the marker in your conversation.`;
+Keep your responses brief and friendly`;
   } else {
     systemPrompt = `You are a friendly form assistant. The user has completed all questions.
     
@@ -87,7 +88,6 @@ Include FORM_COMPLETE at the end of your message.
 
 Keep your response brief and friendly. Don't mention the marker in your conversation.`;
   }
-
   const result = streamText({
     model: groq("llama3-70b-8192"),
     messages,
