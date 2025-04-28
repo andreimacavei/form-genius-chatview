@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useChat } from "ai/react";
+import { useChat } from "@ai-sdk/react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,13 @@ import { CalendarIcon, Send, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useParams } from "next/navigation";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Define question types
 type QuestionType =
@@ -29,7 +36,8 @@ type QuestionType =
   | "date"
   | "text"
   | "long-text"
-  | "email";
+  | "email"
+  | "dropdown";
 
 interface Option {
   id: string;
@@ -37,69 +45,71 @@ interface Option {
 }
 
 interface Question {
-  id: string;
-  text: string;
+  order: string;
+  title: string;
   type: QuestionType;
   options?: Option[];
-  min?: number;
-  max?: number;
+  scale?: {
+    min: number;
+    max: number;
+  };
 }
 
 // Sample questions for the form - duplicated from API for client-side use
-// const formQuestions = [
-//   {
-//     id: "name",
-//     text: "What's your name?",
-//     type: "text" as QuestionType,
-//   },
-//   {
-//     id: "email",
-//     text: "What's your email address?",
-//     type: "email" as QuestionType,
-//   },
-//   {
-//     id: "experience",
-//     text: "How many years of experience do you have?",
-//     type: "number-range" as QuestionType,
-//     min: 0,
-//     max: 20,
-//   },
-//   {
-//     id: "preferred_role",
-//     text: "What role are you applying for?",
-//     type: "single-select" as QuestionType,
-//     options: [
-//       { id: "developer", label: "Developer" },
-//       { id: "designer", label: "Designer" },
-//       { id: "product_manager", label: "Product Manager" },
-//       { id: "marketing", label: "Marketing" },
-//       { id: "other", label: "Other" },
-//     ],
-//   },
-//   {
-//     id: "skills",
-//     text: "Which skills do you have? (Select all that apply)",
-//     type: "multi-select" as QuestionType,
-//     options: [
-//       { id: "javascript", label: "JavaScript" },
-//       { id: "typescript", label: "TypeScript" },
-//       { id: "react", label: "React" },
-//       { id: "nextjs", label: "Next.js" },
-//       { id: "node", label: "Node.js" },
-//       { id: "design", label: "UI/UX Design" },
-//     ],
-//   },
-//   {
-//     id: "start_date",
-//     text: "When are you available to start?",
-//     type: "date" as QuestionType,
-//   },
-//   {
-//     id: "about",
-//     text: "Tell us a bit about yourself and why you're interested in this position.",
-//     type: "long-text" as QuestionType,
-//   },
-// ];
+const formQuestions = [
+  {
+    id: "name",
+    text: "What's your name?",
+    type: "text" as QuestionType,
+  },
+  {
+    id: "email",
+    text: "What's your email address?",
+    type: "email" as QuestionType,
+  },
+  {
+    id: "experience",
+    text: "How many years of experience do you have?",
+    type: "number-range" as QuestionType,
+    min: 0,
+    max: 20,
+  },
+  {
+    id: "preferred_role",
+    text: "What role are you applying for?",
+    type: "single-select" as QuestionType,
+    options: [
+      { id: "developer", label: "Developer" },
+      { id: "designer", label: "Designer" },
+      { id: "product_manager", label: "Product Manager" },
+      { id: "marketing", label: "Marketing" },
+      { id: "other", label: "Other" },
+    ],
+  },
+  {
+    id: "skills",
+    text: "Which skills do you have? (Select all that apply)",
+    type: "multi-select" as QuestionType,
+    options: [
+      { id: "javascript", label: "JavaScript" },
+      { id: "typescript", label: "TypeScript" },
+      { id: "react", label: "React" },
+      { id: "nextjs", label: "Next.js" },
+      { id: "node", label: "Node.js" },
+      { id: "design", label: "UI/UX Design" },
+    ],
+  },
+  {
+    id: "start_date",
+    text: "When are you available to start?",
+    type: "date" as QuestionType,
+  },
+  {
+    id: "about",
+    text: "Tell us a bit about yourself and why you're interested in this position.",
+    type: "long-text" as QuestionType,
+  },
+];
 export default function ChatForm() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
@@ -113,8 +123,7 @@ export default function ChatForm() {
   const [isFormComplete, setIsFormComplete] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
   const [showSplash, setShowSplash] = useState<boolean>(true);
-  const [formQuestions, setFormQuestions] = useState([]);
-
+  const [formQuestions, setFormQuestions] = useState<any[]>([]);
   const [validationErrors, setValidationErrors] = useState<{
     email: string | null;
     singleSelect: string | null;
@@ -139,46 +148,77 @@ export default function ChatForm() {
     isLoading,
   } = useChat({
     api: "/api/chat",
+    body: {
+      questions: formQuestions,
+    },
     initialMessages: [
-      {
-        id: "welcome",
-        role: "assistant",
-        content:
-          "👋 Welcome to our interactive form! I'll guide you through a series of questions. Let's start with the first one: What's your name?",
-      },
+      // {
+      //   id: "welcome",
+      //   role: "assistant",
+      //   content:
+      //     "👋 Welcome to our interactive form! I'll guide you through a series of questions. Let's start with the first one: What's your name?",
+      // },
     ],
     onFinish: (message) => {
-      // Parse the message to extract question information using the new format
       try {
-        // Check for the new marker format
-        const questionMatch = message.content.match(
-          /QUESTION_DATA:([^:]+):([^:]+)/
-        );
-        if (questionMatch) {
-          const questionId = questionMatch[1];
-          const questionType = questionMatch[2];
-
-          // Find the question from our predefined list
-          const foundQuestion = formQuestions.find((q) => q.id === questionId);
-          console.log(formQuestions, "FORM QUESTIONS");
-          if (foundQuestion) {
-            setCurrentQuestion(foundQuestion);
-            // Update progress based on question index
-            const questionIndex = formQuestions.findIndex(
-              (q) => q.id === questionId
-            );
-            setProgress((questionIndex / formQuestions.length) * 100);
-          }
-        } else if (message.content.includes("FORM_COMPLETE")) {
-          setIsFormComplete(true);
-          setCurrentQuestion(null);
-          setProgress(100); // Set progress to 100% when form is complete
-        }
       } catch (error) {
         console.error("Failed to process question data:", error);
       }
     },
   });
+
+  // Custom submit handler that ensures questions are loaded
+  // const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  //   e.preventDefault();
+
+  //   // Check if questions are loaded before submitting
+  //   if (formQuestions.length === 0) {
+  //     console.warn(
+  //       "Form questions not loaded yet. Waiting before submitting..."
+  //     );
+
+  //     // Add a temporary loading message
+  //     append({
+  //       id: "temp-loading",
+  //       role: "assistant",
+  //       content: "Loading your questions... Please wait a moment.",
+  //     });
+
+  //     // Wait for questions to load (max 5 seconds)
+  //     let attempts = 0;
+  //     const checkQuestionsLoaded = setInterval(() => {
+  //       attempts++;
+
+  //       if (formQuestions.length > 0) {
+  //         // Questions loaded, clear the interval and submit
+  //         clearInterval(checkQuestionsLoaded);
+  //         console.log("Questions loaded, now submitting the message");
+
+  //         // Remove temporary message
+  //         const filteredMessages = messages.filter(
+  //           (msg) => msg.id !== "temp-loading"
+  //         );
+
+  //         // Process the form submission with the actual questions
+  //         rawHandleSubmit(e);
+  //       } else if (attempts >= 10) {
+  //         // Give up after 10 attempts (5 seconds)
+  //         clearInterval(checkQuestionsLoaded);
+  //         console.error("Failed to load questions after multiple attempts");
+
+  //         // Update the message to inform the user
+  //         append({
+  //           role: "assistant",
+  //           content:
+  //             "Sorry, I'm having trouble loading the form questions. Please refresh the page and try again.",
+  //         });
+  //       }
+  //     }, 500); // Check every 500ms
+  //   } else {
+  //     // Questions already loaded, proceed normally
+  //     rawHandleSubmit(e);
+  //   }
+  // };
 
   //   Scroll to bottom when messages change
   //   Scroll to bottom when messages change
@@ -193,29 +233,57 @@ export default function ChatForm() {
   const slug = params.slug;
 
   useEffect(() => {
-    const fetchSurveyQuestions = async () => {
+    const fetchSurvey = async () => {
       try {
-        const response = await fetch(`/api/surveys/questions/${slug}`);
-        console.log("Response:", response);
+        const response = await fetch(`/api/surveys/${slug}`);
         if (response.ok) {
           const data = await response.json();
-          console.log("Data:", data);
-          if (data.response.survey_questions) {
-            setFormQuestions(data.response.survey_questions);
-            // console.log("Survey Questions:", data.response.survey_questions);
+          if (data.response && data.response.survey_questions.length > 0) {
+            mapApiSurveysAsFormQuestions(data.response.survey_questions);
           }
         }
-        // console.log("Survey Questions:", formQuestions);
       } catch (error) {
         console.error("Failed to fetch survey questions:", error);
       }
     };
     if (slug) {
-      fetchSurveyQuestions();
+      fetchSurvey();
     }
   }, [slug]);
 
   // Handle form input submission
+  const mapApiSurveysAsFormQuestions = (surveyQuestions: any) => {
+    const questions = surveyQuestions.map((question: any) => {
+      switch (question.type) {
+        case "radio":
+          question.type = "single-select";
+          break;
+        case "checkboxes":
+          question.type = "multi-select";
+          break;
+        case "linear-scale":
+          question.type = "number-range";
+          break;
+      }
+      return question;
+    });
+
+    console.log(questions, "Mapped questions");
+    setFormQuestions(questions);
+
+    // Set the first question as the current question
+    if (questions.length > 0) {
+      setCurrentQuestion(questions[0]);
+      append({
+        role: "assistant",
+        content: `👋 Welcome to our interactive form! I'll guide you through a series of questions. Let's start with the first one: ${questions[0].title}`,
+      });
+    }
+
+    // Initialize progress
+    setProgress(0);
+  };
+
   const submitFormInput = () => {
     console.log("Submitting form input...");
     if (!currentQuestion) return;
@@ -236,6 +304,21 @@ export default function ChatForm() {
           setValidationErrors((prev) => ({
             ...prev,
             singleSelect: null,
+          }));
+        }
+        break;
+      case "dropdown":
+        value = singleSelectValue;
+        isValid = !!value;
+        if (!isValid) {
+          setValidationErrors((prev) => ({
+            ...prev,
+            dropdown: "Please select an option.",
+          }));
+        } else {
+          setValidationErrors((prev) => ({
+            ...prev,
+            dropdown: null,
           }));
         }
         break;
@@ -340,10 +423,51 @@ export default function ChatForm() {
       displayValue = format(value, "PPP");
     }
 
-    append({
+    // Add user message with their answer
+    const userMessage = {
       role: "user",
       content: String(displayValue),
-    });
+    };
+
+    // Get current question index
+    const currentIndex = formQuestions.findIndex(
+      (q) => q.order === currentQuestion.order
+    );
+
+    if (currentIndex < formQuestions.length - 1) {
+      // There's a next question
+      const nextQuestion = formQuestions[currentIndex + 1];
+
+      // Add the user's answer and then the next question from the assistant
+      append(userMessage);
+
+      // Wait a moment before showing the next question to ensure user message renders
+      // setTimeout(() => {
+      //   append({
+      //     role: "assistant",
+      //     content: `Thank you! ${nextQuestion.title}`,
+      //   });
+
+      //   // Set the next question as current
+      setCurrentQuestion(nextQuestion);
+      // }, 100);
+    } else {
+      // This was the last question
+      append(userMessage);
+
+      // Wait a moment before showing the completion message
+      setTimeout(() => {
+        append({
+          role: "assistant",
+          content:
+            "Thank you for completing all the questions! Your responses have been recorded.",
+        });
+
+        // Mark the form as complete
+        setIsFormComplete(true);
+        setCurrentQuestion(null);
+      }, 100);
+    }
 
     // Reset input values
     setSingleSelectValue("");
@@ -353,20 +477,7 @@ export default function ChatForm() {
     setTextValue("");
     setEmailValue("");
 
-    // Send the answer to the AI
-    append({
-      role: "system",
-      content: `User answered question ${
-        currentQuestion.id
-      } with: ${JSON.stringify(
-        value
-      )}. Continue with the next question or complete the form if all questions have been answered.`,
-    });
-
-    // Update progress for next question
-    const currentIndex = formQuestions.findIndex(
-      (q) => q.id === currentQuestion.id
-    );
+    // Update progress
     const nextProgress = ((currentIndex + 1) / formQuestions.length) * 100;
     setProgress(nextProgress);
   };
@@ -384,10 +495,10 @@ export default function ChatForm() {
               onValueChange={setSingleSelectValue}
               className="space-y-2 mt-4"
             >
-              {currentQuestion.options?.map((option) => (
-                <div key={option.id} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option.id} id={option.id} />
-                  <Label htmlFor={option.id}>{option.label}</Label>
+              {currentQuestion.options?.map((option: any) => (
+                <div key={option} className="flex items-center space-x-2">
+                  <RadioGroupItem value={option} id={option} />
+                  <Label htmlFor={option}>{option}</Label>
                 </div>
               ))}
             </RadioGroup>
@@ -399,25 +510,50 @@ export default function ChatForm() {
           </>
         );
 
+      case "dropdown":
+        return (
+          <>
+            <Select
+              value={singleSelectValue}
+              onValueChange={setSingleSelectValue}
+            >
+              <SelectTrigger className="w-full mt-4">
+                <SelectValue placeholder="Select an option" />
+              </SelectTrigger>
+              <SelectContent>
+                {currentQuestion.options?.map((option: any) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {validationErrors.singleSelect && (
+              <p className="text-red-500 text-sm mt-2">
+                {validationErrors.singleSelect}
+              </p>
+            )}
+          </>
+        );
       case "multi-select":
         return (
           <div className="space-y-2 mt-4">
-            {currentQuestion.options?.map((option) => (
-              <div key={option.id} className="flex items-center space-x-2">
+            {currentQuestion.options?.map((option: any) => (
+              <div key={option} className="flex items-center space-x-2">
                 <Checkbox
-                  id={option.id}
-                  checked={multiSelectValue.includes(option.id)}
+                  id={option}
+                  checked={multiSelectValue.includes(option)}
                   onCheckedChange={(checked) => {
                     if (checked) {
-                      setMultiSelectValue([...multiSelectValue, option.id]);
+                      setMultiSelectValue([...multiSelectValue, option]);
                     } else {
                       setMultiSelectValue(
-                        multiSelectValue.filter((id) => id !== option.id)
+                        multiSelectValue.filter((id) => id !== option)
                       );
                     }
                   }}
                 />
-                <Label htmlFor={option.id}>{option.label}</Label>
+                <Label htmlFor={option}>{option}</Label>
               </div>
             ))}
             {validationErrors.multiSelect && (
@@ -426,6 +562,31 @@ export default function ChatForm() {
               </p>
             )}
           </div>
+          //   <div className="space-y-2 mt-4">
+          //     {currentQuestion.options?.map((option) => (
+          //       <div key={option.id} className="flex items-center space-x-2">
+          //         <Checkbox
+          //           id={option.id}
+          //           checked={multiSelectValue.includes(option.id)}
+          //           onCheckedChange={(checked) => {
+          //             if (checked) {
+          //               setMultiSelectValue([...multiSelectValue, option.id]);
+          //             } else {
+          //               setMultiSelectValue(
+          //                 multiSelectValue.filter((id) => id !== option.id)
+          //               );
+          //             }
+          //           }}
+          //         />
+          //         <Label htmlFor={option.id}>{option.label}</Label>
+          //       </div>
+          //     ))}
+          //     {validationErrors.multiSelect && (
+          //       <p className="text-red-500 text-sm mt-2">
+          //         {validationErrors.multiSelect}
+          //       </p>
+          //     )}
+          //   </div>
         );
 
       case "number-range":
@@ -433,15 +594,15 @@ export default function ChatForm() {
           <div className="space-y-4 mt-4">
             <Slider
               value={numberValue}
-              min={currentQuestion.min || 1}
-              max={currentQuestion.max || 10}
+              min={currentQuestion?.scale?.min || 1}
+              max={currentQuestion?.scale?.max || 10}
               step={1}
               onValueChange={setNumberValue}
             />
             <div className="flex justify-between">
-              <span>{currentQuestion.min || 1}</span>
+              <span>{currentQuestion?.scale?.min || 1}</span>
               <span className="font-bold">{numberValue[0]}</span>
-              <span>{currentQuestion.max || 10}</span>
+              <span>{currentQuestion?.scale?.max || 10}</span>
             </div>
           </div>
         );
@@ -716,7 +877,7 @@ export default function ChatForm() {
           </div>
         ) : currentQuestion ? (
           <div className="bg-white rounded-lg shadow-md p-4">
-            <h3 className="font-medium mb-2">{currentQuestion.text}</h3>
+            <h3 className="font-medium mb-2">{currentQuestion.title}</h3>
             {renderQuestionInput()}
             <Button className="mt-4 w-full" onClick={submitFormInput}>
               Submit Answer

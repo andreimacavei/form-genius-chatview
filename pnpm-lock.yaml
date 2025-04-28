@@ -2,6 +2,7 @@ lockfileVersion: 5.4
 
 specifiers:
   '@ai-sdk/groq': latest
+  '@ai-sdk/react': ^1.2.9
   '@hookform/resolvers': ^3.9.1
   '@prisma/client': ^6.6.0
   '@radix-ui/react-accordion': ^1.2.2
@@ -62,6 +63,7 @@ specifiers:
 
 dependencies:
   '@ai-sdk/groq': 1.2.8_zod@3.24.3
+  '@ai-sdk/react': 1.2.9_react@19.1.0+zod@3.24.3
   '@hookform/resolvers': 3.10.0_react-hook-form@7.56.1
   '@prisma/client': 6.6.0_6tku7544pooavsl5fzhziwt7pi
   '@radix-ui/react-accordion': 1.2.8_5j5q5giq4a6q5rwe55huzqxn5e
