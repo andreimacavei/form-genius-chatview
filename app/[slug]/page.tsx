@@ -131,6 +131,7 @@ export default function ChatForm() {
     date: string | null;
     text: string | null;
     longText: string | null;
+    dropdown: string | null;
   }>({
     email: null,
     singleSelect: null,
@@ -138,6 +139,7 @@ export default function ChatForm() {
     date: null,
     text: null,
     longText: null,
+    dropdown: null,
   });
   const {
     messages,
@@ -284,12 +286,21 @@ export default function ChatForm() {
     setProgress(0);
   };
 
-  const submitFormInput = () => {
+  const customHandleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    submitFormInput(input);
+    handleSubmit(e);
+  };
+
+  const submitFormInput = (inputValue?: string) => {
     console.log("Submitting form input...");
     if (!currentQuestion) return;
 
-    let value;
+    let value: string | number | Date | string[] | any;
     let isValid = true;
+    if (inputValue && typeof inputValue === "string") {
+      value = inputValue;
+    }
 
     switch (currentQuestion.type) {
       case "single-select":
@@ -357,8 +368,8 @@ export default function ChatForm() {
         }
         break;
       case "text":
-        value = textValue;
-        isValid = !!textValue.trim();
+        value = value || textValue;
+        isValid = !!value.trim();
         if (!isValid) {
           setValidationErrors((prev) => ({
             ...prev,
@@ -373,12 +384,12 @@ export default function ChatForm() {
         break;
 
       case "long-text":
-        value = textValue;
-        isValid = textValue.trim().length >= 10;
+        value = value || textValue;
+        isValid = value.trim().length >= 10;
         if (!isValid) {
           setValidationErrors((prev) => ({
             ...prev,
-            longText: textValue.trim()
+            longText: value.trim()
               ? "Please enter at least 10 characters."
               : "This field is required.",
           }));
@@ -390,8 +401,8 @@ export default function ChatForm() {
         }
         break;
       case "email":
-        value = emailValue;
-        isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue);
+        value = value || emailValue;
+        isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
         if (!isValid) {
           setValidationErrors((prev) => ({
             ...prev,
@@ -412,7 +423,10 @@ export default function ChatForm() {
     }
 
     // Update form responses
-    const updatedResponses = { ...formResponses, [currentQuestion.id]: value };
+    const updatedResponses = {
+      ...formResponses,
+      [currentQuestion.order]: value,
+    };
     setFormResponses(updatedResponses);
 
     // Add user message
@@ -424,7 +438,7 @@ export default function ChatForm() {
     }
 
     // Add user message with their answer
-    const userMessage = {
+    const userMessage: any = {
       role: "user",
       content: String(displayValue),
     };
@@ -462,11 +476,11 @@ export default function ChatForm() {
           content:
             "Thank you for completing all the questions! Your responses have been recorded.",
         });
-
-        // Mark the form as complete
-        setIsFormComplete(true);
         setCurrentQuestion(null);
-      }, 100);
+        setTimeout(() => {
+          setIsFormComplete(true);
+        }, 5000);
+      }, 500);
     }
 
     // Reset input values
@@ -528,9 +542,9 @@ export default function ChatForm() {
                 ))}
               </SelectContent>
             </Select>
-            {validationErrors.singleSelect && (
+            {validationErrors.dropdown && (
               <p className="text-red-500 text-sm mt-2">
-                {validationErrors.singleSelect}
+                {validationErrors.dropdown}
               </p>
             )}
           </>
@@ -729,10 +743,13 @@ export default function ChatForm() {
   const checkIfDisabled = () => {
     if (
       isLoading ||
+      isFormComplete ||
+      currentQuestion === null ||
       currentQuestion?.type === "date" ||
       currentQuestion?.type === "multi-select" ||
       currentQuestion?.type === "single-select" ||
-      currentQuestion?.type === "number-range"
+      currentQuestion?.type === "number-range" ||
+      currentQuestion?.type === "dropdown"
     ) {
       return true;
     }
@@ -893,7 +910,7 @@ export default function ChatForm() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                handleSubmit(e);
+                customHandleSubmit(e);
               }}
               className="flex gap-2"
             >
