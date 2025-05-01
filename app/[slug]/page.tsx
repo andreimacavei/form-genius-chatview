@@ -49,6 +49,7 @@ interface Question {
   title: string;
   type: QuestionType;
   options?: Option[];
+  number: number;
   scale?: {
     min: number;
     max: number;
@@ -444,9 +445,14 @@ export default function ChatForm() {
     };
 
     // Get current question index
-    const currentIndex = formQuestions.findIndex(
-      (q) => q.order === currentQuestion.order
-    );
+    const currentIndex = formQuestions.findIndex((q) => {
+      if (currentQuestion?.order && q?.order) {
+        return q.order === currentQuestion.order;
+      } else if (currentQuestion?.number && q?.number) {
+        return q.number === currentQuestion.number;
+      }
+      return false;
+    });
 
     if (currentIndex < formQuestions.length - 1) {
       // There's a next question
