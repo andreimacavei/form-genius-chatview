@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SurveyNotFound } from "@/components/survey-not-found";
 
 // Define question types
 type QuestionType =
@@ -125,6 +126,8 @@ export default function ChatForm() {
   const [progress, setProgress] = useState<number>(0);
   const [showSplash, setShowSplash] = useState<boolean>(true);
   const [formQuestions, setFormQuestions] = useState<any[]>([]);
+  const [survey, setSurvey] = useState<any>(null);
+  const [errorPage, setErrorPage] = useState<boolean>(false);
   const [validationErrors, setValidationErrors] = useState<{
     email: string | null;
     singleSelect: string | null;
@@ -241,12 +244,21 @@ export default function ChatForm() {
         const response = await fetch(`/api/surveys/${slug}`);
         if (response.ok) {
           const data = await response.json();
-          if (data.response && data.response.survey_questions.length > 0) {
-            mapApiSurveysAsFormQuestions(data.response.survey_questions);
+          if (data.response) {
+            setSurvey(data?.response);
+            if (data.response.survey_questions.length > 0) {
+              mapApiSurveysAsFormQuestions(data.response.survey_questions);
+            }
+          }
+        } else {
+          if (response.status === 404) {
+            setSurvey(null);
           }
         }
-      } catch (error) {
-        console.error("Failed to fetch survey questions:", error);
+      } catch (error: any) {
+        if (error?.status === 404) {
+          setSurvey(null);
+        }
       }
     };
     if (slug) {
@@ -740,7 +752,7 @@ export default function ChatForm() {
         <Button
           size="lg"
           className="px-8 py-6 rounded-full bg-black hover:bg-gray-800 text-white"
-          onClick={() => setShowSplash(false)}
+          onClick={() => (survey ? setShowSplash(false) : setErrorPage(true))}
         >
           Get Started <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
@@ -768,10 +780,10 @@ export default function ChatForm() {
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Show splash screen if showSplash is true */}
-      {showSplash && <SplashScreen />}
-
+      {showSplash && !errorPage && <SplashScreen />}
+      {errorPage && <SurveyNotFound />}
       {/* Progress bar */}
-      {!showSplash && (
+      {!showSplash && !errorPage && (
         <div className="fixed top-0 left-0 right-0 h-1 bg-gray-200 z-50">
           <div
             className="h-full bg-purple-500 transition-all duration-500 ease-in-out"
