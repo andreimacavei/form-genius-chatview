@@ -281,10 +281,12 @@ export default function ChatForm() {
         role: "assistant",
         content: `👋 Welcome to our interactive form! I'll guide you through a series of questions. Let's start with the first one: ${questions[0].title}`,
       });
-    }
 
-    // Initialize progress
-    setProgress(0);
+      setProgress((1 / questions.length) * 100);
+    } else {
+      // If no questions, set progress to 0
+      setProgress(0);
+    }
   };
 
   const customHandleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -498,7 +500,7 @@ export default function ChatForm() {
     setEmailValue("");
 
     // Update progress
-    const nextProgress = ((currentIndex + 1) / formQuestions.length) * 100;
+    const nextProgress = ((currentIndex + 2) / formQuestions.length) * 100;
     setProgress(nextProgress);
   };
 
@@ -772,7 +774,7 @@ export default function ChatForm() {
       {!showSplash && (
         <div className="fixed top-0 left-0 right-0 h-1 bg-gray-200 z-50">
           <div
-            className="h-full bg-green-500 transition-all duration-500 ease-in-out"
+            className="h-full bg-purple-500 transition-all duration-500 ease-in-out"
             style={{ width: `${progress}%` }}
             aria-valuemin={0}
             aria-valuemax={100}
@@ -902,7 +904,7 @@ export default function ChatForm() {
           <div className="bg-white rounded-lg shadow-md p-4">
             <h3 className="font-medium mb-2">{currentQuestion.title}</h3>
             {renderQuestionInput()}
-            <Button className="mt-4 w-full" onClick={submitFormInput}>
+            <Button className="mt-4 w-full" onClick={() => submitFormInput()}>
               Submit Answer
             </Button>
           </div>
