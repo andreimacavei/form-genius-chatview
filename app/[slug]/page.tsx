@@ -740,25 +740,68 @@ export default function ChatForm() {
         </div>
 
         <h1 className="text-4xl font-bold mb-6 text-gray-900">
-          Good afternoon!
+          {/* Good afternoon! */}
+          {survey?.title}
         </h1>
 
         <p className="text-gray-600 mb-12 text-lg max-w-md mx-auto">
-          Welcome! We're curious about your experience with AI tools for survey
+          {/* Welcome! We're curious about your experience with AI tools for survey
           creation. Your insights will help us improve these tools. Let's get
-          started!
+          started! */}
+          {survey?.description}
         </p>
+
+        {/* Email input if collectEmailByDefault is true */}
+        {survey?.settings?.defaults?.collectEmailByDefault && (
+          <div className="mb-6">
+            <Input
+              type="email"
+              className="mt-2"
+              placeholder="Enter your email"
+              value={emailValue}
+              onChange={(e) => setEmailValue(e.target.value)}
+              autoFocus
+            />
+            {validationErrors.email && (
+              <p className="text-red-500 text-sm mt-2">
+                {validationErrors.email}
+              </p>
+            )}
+          </div>
+        )}
 
         <Button
           size="lg"
           className="px-8 py-6 rounded-full bg-black hover:bg-gray-800 text-white"
-          onClick={() => (survey ? setShowSplash(false) : setErrorPage(true))}
+          onClick={onGetStartedButton}
         >
           Get Started <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
       </div>
     </div>
   );
+
+  const onGetStartedButton = () => {
+    if (!survey) {
+      setErrorPage(true);
+      return;
+    }
+    const requiresEmail = survey?.settings?.defaults?.collectEmailByDefault;
+
+    if (requiresEmail) {
+      if (!emailValue || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          email: "Please enter a valid email address.",
+        }));
+        return;
+      }
+
+      setValidationErrors((prev) => ({ ...prev, email: null }));
+    }
+
+    setShowSplash(false);
+  };
 
   const checkIfDisabled = () => {
     if (
