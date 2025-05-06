@@ -256,11 +256,13 @@ export default function ChatForm() {
         } else {
           if (response.status === 404) {
             setSurvey(null);
+            setErrorPage(true);
           }
         }
       } catch (error: any) {
         if (error?.status === 404) {
           setSurvey(null);
+          setErrorPage(true);
         }
       } finally {
         setIsSurveyLoading(false);
@@ -733,12 +735,12 @@ export default function ChatForm() {
           <div className="absolute top-16 left-1/3 w-28 h-16 bg-green-200 rotate-3 transform-gpu z-30"></div>
         </div>
 
-        <h1 className="text-4xl font-bold mb-6 text-gray-900">
+        <h1 className="text-xl font-bold mb-6 text-gray-900">
           {/* Good afternoon! */}
           {survey?.title}
         </h1>
 
-        <p className="text-gray-600 mb-12 text-lg max-w-md mx-auto">
+        <p className="text-gray-600 mb-12 text-base max-w-md mx-auto">
           {/* Welcome! We're curious about your experience with AI tools for survey
           creation. Your insights will help us improve these tools. Let's get
           started! */}
@@ -747,10 +749,10 @@ export default function ChatForm() {
 
         {/* Email input if collectEmailByDefault is true */}
         {survey?.settings?.defaults?.collectEmailByDefault && (
-          <div className="mb-6">
+          <div className="mb-6 max-w-sm mx-auto">
             <Input
               type="email"
-              className="mt-2"
+              className="mt-2 "
               placeholder="Enter your email"
               value={emailValue}
               onChange={(e) => setEmailValue(e.target.value)}
@@ -776,11 +778,6 @@ export default function ChatForm() {
   );
 
   const onGetStartedButton = () => {
-    if (!survey) {
-      setErrorPage(true);
-      return;
-    }
-
     // if (formQuestions.length === 0) {
     //   setErrorPage(true);
     //   return;
@@ -817,7 +814,7 @@ export default function ChatForm() {
         setProgress((1 / formQuestions.length) * 100);
       }
       setIsThinking(false);
-    }, 1500);
+    }, 2000);
   };
 
   const checkIfDisabled = () => {
