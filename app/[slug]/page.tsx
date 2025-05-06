@@ -145,6 +145,7 @@ export default function ChatForm() {
     longText: null,
     dropdown: null,
   });
+  const [isSurveyLoading, setIsSurveyLoading] = useState<boolean>(true);
   const {
     messages,
     input,
@@ -240,6 +241,7 @@ export default function ChatForm() {
 
   useEffect(() => {
     const fetchSurvey = async () => {
+      setIsSurveyLoading(true);
       try {
         const response = await fetch(`/api/surveys/${slug}`);
         if (response.ok) {
@@ -259,6 +261,8 @@ export default function ChatForm() {
         if (error?.status === 404) {
           setSurvey(null);
         }
+      } finally {
+        setIsSurveyLoading(false);
       }
     };
     if (slug) {
@@ -299,6 +303,9 @@ export default function ChatForm() {
       // If no questions, set progress to 0
       setProgress(0);
     }
+
+    // Loading is complete
+    setIsSurveyLoading(false);
   };
 
   const customHandleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -786,6 +793,12 @@ export default function ChatForm() {
       setErrorPage(true);
       return;
     }
+
+    // if (formQuestions.length === 0) {
+    //   setErrorPage(true);
+    //   return;
+    // }
+
     const requiresEmail = survey?.settings?.defaults?.collectEmailByDefault;
 
     if (requiresEmail) {
@@ -820,10 +833,30 @@ export default function ChatForm() {
     return false;
   };
 
+  // Survey loading component
+  const SurveyLoadingScreen = () => (
+    <div className="fixed inset-0 bg-white flex flex-col items-center justify-center p-6 z-50">
+      <div className="w-full max-w-md text-center">
+        <div className="flex flex-col items-center justify-center gap-4">
+          <div className="relative w-24 h-24">
+            <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-t-purple-500 animate-spin"></div>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800">Loading Survey</h2>
+          <p className="text-gray-500">
+            Please wait while we prepare your form...
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      {/* Show loading screen if survey is loading */}
+      {isSurveyLoading && <SurveyLoadingScreen />}
       {/* Show splash screen if showSplash is true */}
-      {showSplash && !errorPage && <SplashScreen />}
+      {!isSurveyLoading && showSplash && !errorPage && <SplashScreen />}
       {errorPage && <SurveyNotFound />}
       {/* Progress bar */}
       {!showSplash && !errorPage && (
