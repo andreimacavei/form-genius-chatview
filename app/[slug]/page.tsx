@@ -989,7 +989,7 @@ export default function ChatForm() {
           </div>
         ) : currentQuestion ? (
           <div
-            className="bg-white rounded-lg shadow-md p-4  mb-4 mx-[3.2rem]"
+            className="bg-white rounded-lg shadow-md p-4 mb-9 mx-[2.8rem]"
             // style={{ marginLeft: "3.2rem", marginRight: "3.2rem" }}
           >
             <h3 className="font-medium mb-2">{currentQuestion.title}</h3>
@@ -1010,18 +1010,19 @@ export default function ChatForm() {
                 e.preventDefault();
                 customHandleSubmit(e);
               }}
-              className="flex gap-2"
+              className="relative"
             >
               <Input
                 value={input}
                 onChange={handleInputChange}
                 placeholder="Type your message..."
                 disabled={checkIfDisabled()}
-                className="flex-1"
+                className="w-full rounded-full h-12"
               />
               <Button
                 type="submit"
                 disabled={checkIfDisabled() || !input.trim()}
+                className="absolute rounded-full right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
               >
                 <Send className="h-4 w-4" />
               </Button>
