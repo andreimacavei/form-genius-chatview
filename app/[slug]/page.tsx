@@ -146,6 +146,7 @@ export default function ChatForm() {
     dropdown: null,
   });
   const [isSurveyLoading, setIsSurveyLoading] = useState<boolean>(true);
+  const [isThinking, setIsThinking] = useState<boolean>(false);
   const {
     messages,
     input,
@@ -289,20 +290,6 @@ export default function ChatForm() {
 
     console.log(questions, "Mapped questions");
     setFormQuestions(questions);
-
-    // Set the first question as the current question
-    if (questions.length > 0) {
-      setCurrentQuestion(questions[0]);
-      append({
-        role: "assistant",
-        content: `👋 Welcome to our interactive form! I'll guide you through a series of questions. Let's start with the first one: ${questions[0].title}`,
-      });
-
-      setProgress((1 / questions.length) * 100);
-    } else {
-      // If no questions, set progress to 0
-      setProgress(0);
-    }
 
     // Loading is complete
     setIsSurveyLoading(false);
@@ -813,12 +800,30 @@ export default function ChatForm() {
       setValidationErrors((prev) => ({ ...prev, email: null }));
     }
 
+    // First hide splash screen
     setShowSplash(false);
+
+    // Then simulate loading for a more natural conversation experience
+    setIsThinking(true);
+
+    // Delay setting the first question to give time for the loading animation
+    setTimeout(() => {
+      if (formQuestions.length > 0) {
+        setCurrentQuestion(formQuestions[0]);
+        append({
+          role: "assistant",
+          content: `👋 Welcome to our interactive form! I'll guide you through a series of questions. Let's start with the first one: ${formQuestions[0].title}`,
+        });
+        setProgress((1 / formQuestions.length) * 100);
+      }
+      setIsThinking(false);
+    }, 1500);
   };
 
   const checkIfDisabled = () => {
     if (
       isLoading ||
+      isThinking ||
       isFormComplete ||
       currentQuestion === null ||
       currentQuestion?.type === "date" ||
@@ -921,7 +926,7 @@ export default function ChatForm() {
           <div ref={messagesEndRef} />
         </div>
 
-        {isLoading && (
+        {(isLoading || isThinking) && (
           <div className="flex justify-start mb-4">
             <div className="flex items-center gap-3">
               <Avatar>
