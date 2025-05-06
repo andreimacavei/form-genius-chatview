@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, Send, ArrowRight } from "lucide-react";
+import { CalendarIcon, Send, ArrowRight, User, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useParams } from "next/navigation";
@@ -895,10 +895,9 @@ export default function ChatForm() {
                 >
                   <div className="flex items-start gap-3 max-w-[80%]">
                     {message.role !== "user" && (
-                      <Avatar>
-                        <AvatarFallback>AI</AvatarFallback>
-                        <AvatarImage src="/placeholder.svg?height=40&width=40" />
-                      </Avatar>
+                      <div className="flex items-center justify-center h-8 w-8 bg-primary rounded-full p-1.5">
+                        <Bot className="h-5 w-5 text-white" />
+                      </div>
                     )}
                     <div
                       className={cn(
@@ -911,10 +910,9 @@ export default function ChatForm() {
                       {displayContent}
                     </div>
                     {message.role === "user" && (
-                      <Avatar>
-                        <AvatarFallback>U</AvatarFallback>
-                        <AvatarImage src="/placeholder.svg?height=40&width=40" />
-                      </Avatar>
+                      <div className="flex items-center justify-center h-8 w-8 bg-primary rounded-full p-1.5">
+                        <User className="h-5 w-5 text-white" />
+                      </div>
                     )}
                   </div>
                 </div>
@@ -926,10 +924,9 @@ export default function ChatForm() {
         {(isLoading || isThinking) && (
           <div className="flex justify-start mb-4">
             <div className="flex items-center gap-3">
-              <Avatar>
-                <AvatarFallback>AI</AvatarFallback>
-                <AvatarImage src="/placeholder.svg?height=40&width=40" />
-              </Avatar>
+              <div className="flex items-center justify-center h-8 w-8 bg-primary rounded-full p-1.5">
+                <Bot className="h-5 w-5 text-white" />
+              </div>
               <div className="bg-white shadow-sm rounded-lg px-4 py-2">
                 <div className="flex space-x-2">
                   <div
