@@ -994,7 +994,10 @@ export default function ChatForm() {
             </div>
           </div>
         ) : currentQuestion ? (
-          <div className="bg-white rounded-lg shadow-md p-4">
+          <div
+            className="bg-white rounded-lg shadow-md p-4 max-w-2xl"
+            style={{ marginLeft: "3.2rem", marginRight: "3.2rem" }}
+          >
             <h3 className="font-medium mb-2">{currentQuestion.title}</h3>
             {renderQuestionInput()}
             <Button className="mt-4 w-full" onClick={() => submitFormInput()}>
