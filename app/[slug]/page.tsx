@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import { CalendarIcon, Send, ArrowRight } from "lucide-react";
+import { CalendarIcon, Send, ArrowRight, User, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useParams } from "next/navigation";
@@ -27,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SurveyNotFound } from "@/components/survey-not-found";
 
 // Define question types
 type QuestionType =
@@ -125,6 +126,8 @@ export default function ChatForm() {
   const [progress, setProgress] = useState<number>(0);
   const [showSplash, setShowSplash] = useState<boolean>(true);
   const [formQuestions, setFormQuestions] = useState<any[]>([]);
+  const [survey, setSurvey] = useState<any>(null);
+  const [errorPage, setErrorPage] = useState<boolean>(false);
   const [validationErrors, setValidationErrors] = useState<{
     email: string | null;
     singleSelect: string | null;
@@ -142,6 +145,8 @@ export default function ChatForm() {
     longText: null,
     dropdown: null,
   });
+  const [isSurveyLoading, setIsSurveyLoading] = useState<boolean>(true);
+  const [isThinking, setIsThinking] = useState<boolean>(false);
   const {
     messages,
     input,
@@ -237,16 +242,30 @@ export default function ChatForm() {
 
   useEffect(() => {
     const fetchSurvey = async () => {
+      setIsSurveyLoading(true);
       try {
         const response = await fetch(`/api/surveys/${slug}`);
         if (response.ok) {
           const data = await response.json();
-          if (data.response && data.response.survey_questions.length > 0) {
-            mapApiSurveysAsFormQuestions(data.response.survey_questions);
+          if (data.response) {
+            setSurvey(data?.response);
+            if (data.response.survey_questions.length > 0) {
+              mapApiSurveysAsFormQuestions(data.response.survey_questions);
+            }
+          }
+        } else {
+          if (response.status === 404) {
+            setSurvey(null);
+            setErrorPage(true);
           }
         }
-      } catch (error) {
-        console.error("Failed to fetch survey questions:", error);
+      } catch (error: any) {
+        if (error?.status === 404) {
+          setSurvey(null);
+          setErrorPage(true);
+        }
+      } finally {
+        setIsSurveyLoading(false);
       }
     };
     if (slug) {
@@ -274,17 +293,8 @@ export default function ChatForm() {
     console.log(questions, "Mapped questions");
     setFormQuestions(questions);
 
-    // Set the first question as the current question
-    if (questions.length > 0) {
-      setCurrentQuestion(questions[0]);
-      append({
-        role: "assistant",
-        content: `👋 Welcome to our interactive form! I'll guide you through a series of questions. Let's start with the first one: ${questions[0].title}`,
-      });
-    }
-
-    // Initialize progress
-    setProgress(0);
+    // Loading is complete
+    setIsSurveyLoading(false);
   };
 
   const customHandleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -498,7 +508,7 @@ export default function ChatForm() {
     setEmailValue("");
 
     // Update progress
-    const nextProgress = ((currentIndex + 1) / formQuestions.length) * 100;
+    const nextProgress = ((currentIndex + 2) / formQuestions.length) * 100;
     setProgress(nextProgress);
   };
 
@@ -725,20 +735,41 @@ export default function ChatForm() {
           <div className="absolute top-16 left-1/3 w-28 h-16 bg-green-200 rotate-3 transform-gpu z-30"></div>
         </div>
 
-        <h1 className="text-4xl font-bold mb-6 text-gray-900">
-          Good afternoon!
+        <h1 className="text-xl font-bold mb-6 text-gray-900">
+          {/* Good afternoon! */}
+          {survey?.title}
         </h1>
 
-        <p className="text-gray-600 mb-12 text-lg max-w-md mx-auto">
-          Welcome! We're curious about your experience with AI tools for survey
+        <p className="text-gray-600 mb-12 text-base max-w-md mx-auto">
+          {/* Welcome! We're curious about your experience with AI tools for survey
           creation. Your insights will help us improve these tools. Let's get
-          started!
+          started! */}
+          {survey?.description}
         </p>
+
+        {/* Email input if collectEmailByDefault is true */}
+        {survey?.settings?.defaults?.collectEmailByDefault && (
+          <div className="mb-6 max-w-sm mx-auto">
+            <Input
+              type="email"
+              className="mt-2 "
+              placeholder="Enter your email"
+              value={emailValue}
+              onChange={(e) => setEmailValue(e.target.value)}
+              autoFocus
+            />
+            {validationErrors.email && (
+              <p className="text-red-500 text-sm mt-2">
+                {validationErrors.email}
+              </p>
+            )}
+          </div>
+        )}
 
         <Button
           size="lg"
           className="px-8 py-6 rounded-full bg-black hover:bg-gray-800 text-white"
-          onClick={() => setShowSplash(false)}
+          onClick={onGetStartedButton}
         >
           Get Started <ArrowRight className="ml-2 h-5 w-5" />
         </Button>
@@ -746,9 +777,50 @@ export default function ChatForm() {
     </div>
   );
 
+  const onGetStartedButton = () => {
+    // if (formQuestions.length === 0) {
+    //   setErrorPage(true);
+    //   return;
+    // }
+
+    const requiresEmail = survey?.settings?.defaults?.collectEmailByDefault;
+
+    if (requiresEmail) {
+      if (!emailValue || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          email: "Please enter a valid email address.",
+        }));
+        return;
+      }
+
+      setValidationErrors((prev) => ({ ...prev, email: null }));
+    }
+
+    // First hide splash screen
+    setShowSplash(false);
+
+    // Then simulate loading for a more natural conversation experience
+    setIsThinking(true);
+
+    // Delay setting the first question to give time for the loading animation
+    setTimeout(() => {
+      if (formQuestions.length > 0) {
+        setCurrentQuestion(formQuestions[0]);
+        append({
+          role: "assistant",
+          content: `👋 Welcome to our interactive form! I'll guide you through a series of questions. Let's start with the first one: ${formQuestions[0].title}`,
+        });
+        setProgress((1 / formQuestions.length) * 100);
+      }
+      setIsThinking(false);
+    }, 2000);
+  };
+
   const checkIfDisabled = () => {
     if (
       isLoading ||
+      isThinking ||
       isFormComplete ||
       currentQuestion === null ||
       currentQuestion?.type === "date" ||
@@ -763,16 +835,36 @@ export default function ChatForm() {
     return false;
   };
 
+  // Survey loading component
+  const SurveyLoadingScreen = () => (
+    <div className="fixed inset-0 bg-white flex flex-col items-center justify-center p-6 z-50">
+      <div className="w-full max-w-md text-center">
+        <div className="flex flex-col items-center justify-center gap-4">
+          <div className="relative w-24 h-24">
+            <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-t-purple-500 animate-spin"></div>
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800">Loading Survey</h2>
+          <p className="text-gray-500">
+            Please wait while we prepare your form...
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      {/* Show loading screen if survey is loading */}
+      {isSurveyLoading && <SurveyLoadingScreen />}
       {/* Show splash screen if showSplash is true */}
-      {showSplash && <SplashScreen />}
-
+      {!isSurveyLoading && showSplash && !errorPage && <SplashScreen />}
+      {errorPage && <SurveyNotFound />}
       {/* Progress bar */}
-      {!showSplash && (
+      {!showSplash && !errorPage && (
         <div className="fixed top-0 left-0 right-0 h-1 bg-gray-200 z-50">
           <div
-            className="h-full bg-green-500 transition-all duration-500 ease-in-out"
+            className="h-full bg-purple-500 transition-all duration-500 ease-in-out"
             style={{ width: `${progress}%` }}
             aria-valuemin={0}
             aria-valuemax={100}
@@ -803,10 +895,9 @@ export default function ChatForm() {
                 >
                   <div className="flex items-start gap-3 max-w-[80%]">
                     {message.role !== "user" && (
-                      <Avatar>
-                        <AvatarFallback>AI</AvatarFallback>
-                        <AvatarImage src="/placeholder.svg?height=40&width=40" />
-                      </Avatar>
+                      <div className="flex items-center justify-center h-8 w-8 bg-primary rounded-full p-1.5">
+                        <Bot className="h-5 w-5 text-white" />
+                      </div>
                     )}
                     <div
                       className={cn(
@@ -819,10 +910,9 @@ export default function ChatForm() {
                       {displayContent}
                     </div>
                     {message.role === "user" && (
-                      <Avatar>
-                        <AvatarFallback>U</AvatarFallback>
-                        <AvatarImage src="/placeholder.svg?height=40&width=40" />
-                      </Avatar>
+                      <div className="flex items-center justify-center h-8 w-8 bg-primary rounded-full p-1.5">
+                        <User className="h-5 w-5 text-white" />
+                      </div>
                     )}
                   </div>
                 </div>
@@ -831,13 +921,12 @@ export default function ChatForm() {
           <div ref={messagesEndRef} />
         </div>
 
-        {isLoading && (
+        {(isLoading || isThinking) && (
           <div className="flex justify-start mb-4">
             <div className="flex items-center gap-3">
-              <Avatar>
-                <AvatarFallback>AI</AvatarFallback>
-                <AvatarImage src="/placeholder.svg?height=40&width=40" />
-              </Avatar>
+              <div className="flex items-center justify-center h-8 w-8 bg-primary rounded-full p-1.5">
+                <Bot className="h-5 w-5 text-white" />
+              </div>
               <div className="bg-white shadow-sm rounded-lg px-4 py-2">
                 <div className="flex space-x-2">
                   <div
@@ -899,10 +988,13 @@ export default function ChatForm() {
             </div>
           </div>
         ) : currentQuestion ? (
-          <div className="bg-white rounded-lg shadow-md p-4">
+          <div
+            className="bg-white rounded-lg shadow-md p-4 mb-9 mx-[2.8rem]"
+            // style={{ marginLeft: "3.2rem", marginRight: "3.2rem" }}
+          >
             <h3 className="font-medium mb-2">{currentQuestion.title}</h3>
             {renderQuestionInput()}
-            <Button className="mt-4 w-full" onClick={submitFormInput}>
+            <Button className="mt-4 w-full" onClick={() => submitFormInput()}>
               Submit Answer
             </Button>
           </div>
@@ -918,18 +1010,19 @@ export default function ChatForm() {
                 e.preventDefault();
                 customHandleSubmit(e);
               }}
-              className="flex gap-2"
+              className="relative"
             >
               <Input
                 value={input}
                 onChange={handleInputChange}
                 placeholder="Type your message..."
                 disabled={checkIfDisabled()}
-                className="flex-1"
+                className="w-full rounded-full h-12"
               />
               <Button
                 type="submit"
                 disabled={checkIfDisabled() || !input.trim()}
+                className="absolute rounded-full right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
               >
                 <Send className="h-4 w-4" />
               </Button>

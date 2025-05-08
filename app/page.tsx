@@ -1,5 +1,14 @@
 "use client";
 
+// Redirect to dashboard if on root URL
+if (typeof window !== "undefined" && window.location.pathname === "/") {
+  const dashboardUrl =
+    process.env.NEXT_PUBLIC_SITE_URL || "https://your-dashboard-url.com";
+  if (window.location.href !== dashboardUrl) {
+    window.location.replace(dashboardUrl);
+  }
+}
+
 import { useState, useEffect, useRef } from "react";
 import { useChat } from "ai/react";
 import { Button } from "@/components/ui/button";
