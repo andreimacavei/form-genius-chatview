@@ -3,30 +3,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useChat } from "@ai-sdk/react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { Slider } from "@/components/ui/slider";
-import { Label } from "@/components/ui/label";
-import { CalendarIcon, Send, ArrowRight, User, Bot } from "lucide-react";
+import { Send, User, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useParams } from "next/navigation";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { SurveyNotFound } from "@/components/survey-not-found";
 import SplashScreen from "@/components/splash-screen";
 import {
@@ -39,6 +20,9 @@ import {
   validateLongText,
   validateEmail,
 } from "../../lib/validation";
+
+import { SingleSelectInput, DropdownInput, MultiSelectInput, NumberRangeInput, DateInput, TextInput, LongTextInput, EmailInput } from "@/components/question-inputs";
+
 
 // Define question types
 type QuestionType =
@@ -345,183 +329,74 @@ export default function ChatForm() {
     switch (currentQuestion.type) {
       case "single-select":
         return (
-          <>
-            <RadioGroup
-              value={singleSelectValue}
-              onValueChange={setSingleSelectValue}
-              className="space-y-2 mt-4"
-            >
-              {currentQuestion.options?.map((option: any) => (
-                <div key={option} className="flex items-center space-x-2">
-                  <RadioGroupItem value={option} id={option} />
-                  <Label htmlFor={option}>{option}</Label>
-                </div>
-              ))}
-            </RadioGroup>
-            {validationErrors.singleSelect && (
-              <p className="text-red-500 text-sm mt-2">
-                {validationErrors.singleSelect}
-              </p>
-            )}
-          </>
+          <SingleSelectInput
+            value={singleSelectValue}
+            onChange={setSingleSelectValue}
+            options={(currentQuestion.options || []).map((o) => typeof o === 'string' ? o : o.label)}
+            error={validationErrors.singleSelect}
+          />
         );
-
       case "dropdown":
         return (
-          <>
-            <Select
-              value={singleSelectValue}
-              onValueChange={setSingleSelectValue}
-            >
-              <SelectTrigger className="w-full mt-4">
-                <SelectValue placeholder="Select an option" />
-              </SelectTrigger>
-              <SelectContent>
-                {currentQuestion.options?.map((option: any) => (
-                  <SelectItem key={option} value={option}>
-                    {option}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {validationErrors.dropdown && (
-              <p className="text-red-500 text-sm mt-2">
-                {validationErrors.dropdown}
-              </p>
-            )}
-          </>
+          <DropdownInput
+            value={singleSelectValue}
+            onChange={setSingleSelectValue}
+            options={(currentQuestion.options || []).map((o) => typeof o === 'string' ? o : o.label)}
+            error={validationErrors.dropdown}
+          />
         );
       case "multi-select":
         return (
-          <div className="space-y-2 mt-4">
-            {currentQuestion.options?.map((option: any) => (
-              <div key={option} className="flex items-center space-x-2">
-                <Checkbox
-                  id={option}
-                  checked={multiSelectValue.includes(option)}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setMultiSelectValue([...multiSelectValue, option]);
-                    } else {
-                      setMultiSelectValue(
-                        multiSelectValue.filter((id) => id !== option)
-                      );
-                    }
-                  }}
-                />
-                <Label htmlFor={option}>{option}</Label>
-              </div>
-            ))}
-            {validationErrors.multiSelect && (
-              <p className="text-red-500 text-sm mt-2">
-                {validationErrors.multiSelect}
-              </p>
-            )}
-          </div>
+          <MultiSelectInput
+            value={multiSelectValue}
+            onChange={setMultiSelectValue}
+            options={(currentQuestion.options || []).map((o) => typeof o === 'string' ? o : o.label)}
+            error={validationErrors.multiSelect}
+          />
         );
-
       case "number-range":
         return (
-          <div className="space-y-4 mt-4">
-            <Slider
-              value={numberValue}
-              min={currentQuestion?.scale?.min || 1}
-              max={currentQuestion?.scale?.max || 10}
-              step={1}
-              onValueChange={setNumberValue}
-            />
-            <div className="flex justify-between">
-              <span>{currentQuestion?.scale?.min || 1}</span>
-              <span className="font-bold">{numberValue[0]}</span>
-              <span>{currentQuestion?.scale?.max || 10}</span>
-            </div>
-          </div>
+          <NumberRangeInput
+            value={numberValue}
+            onChange={setNumberValue}
+            min={currentQuestion?.scale?.min || 1}
+            max={currentQuestion?.scale?.max || 10}
+          />
         );
-
       case "date":
         return (
-          <div className="mt-4">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !dateValue && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateValue ? format(dateValue, "PPP") : "Select a date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0">
-                <Calendar
-                  mode="single"
-                  selected={dateValue}
-                  onSelect={setDateValue}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-            {validationErrors.date && (
-              <p className="text-red-500 text-sm mt-2">
-                {validationErrors.date}
-              </p>
-            )}
-          </div>
+          <DateInput
+            value={dateValue}
+            onChange={setDateValue}
+            error={validationErrors.date}
+          />
         );
-
       case "text":
         return (
-          <>
-            <Input
-              value={textValue}
-              onChange={(e) => setTextValue(e.target.value)}
-              className="mt-4"
-              placeholder="Type your answer..."
-            />
-            {validationErrors.text && (
-              <p className="text-red-500 text-sm mt-2">
-                {validationErrors.text}
-              </p>
-            )}
-          </>
+          <TextInput
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
+            error={validationErrors.text}
+            placeholder="Type your answer..."
+          />
         );
-
       case "long-text":
         return (
-          <>
-            <Textarea
-              value={textValue}
-              onChange={(e) => setTextValue(e.target.value)}
-              className="mt-4"
-              placeholder="Type your answer..."
-              rows={4}
-            />
-            {validationErrors.longText && (
-              <p className="text-red-500 text-sm mt-2">
-                {validationErrors.longText}
-              </p>
-            )}
-          </>
+          <LongTextInput
+            value={textValue}
+            onChange={(e) => setTextValue(e.target.value)}
+            error={validationErrors.longText}
+            placeholder="Type your answer..."
+          />
         );
-
       case "email":
         return (
-          <>
-            <Input
-              type="email"
-              value={emailValue}
-              onChange={(e) => setEmailValue(e.target.value)}
-              className="mt-4"
-              placeholder="your@email.com"
-            />
-            {validationErrors.email && (
-              <p className="text-red-500 text-sm mt-2">
-                {validationErrors.email}
-              </p>
-            )}
-          </>
+          <EmailInput
+            value={emailValue}
+            onChange={(e) => setEmailValue(e.target.value)}
+            error={validationErrors.email}
+            placeholder="your@email.com"
+          />
         );
     }
   };
