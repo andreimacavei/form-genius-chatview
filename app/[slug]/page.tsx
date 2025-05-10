@@ -29,6 +29,16 @@ import {
 } from "@/components/ui/select";
 import { SurveyNotFound } from "@/components/survey-not-found";
 import SplashScreen from "@/components/splash-screen";
+import {
+  validateSingleSelect,
+  validateDropdown,
+  validateMultiSelect,
+  validateNumberRange,
+  validateDate,
+  validateText,
+  validateLongText,
+  validateEmail,
+} from "../../lib/validation";
 
 // Define question types
 type QuestionType =
@@ -58,61 +68,6 @@ interface Question {
   };
 }
 
-// Sample questions for the form - duplicated from API for client-side use
-const formQuestions = [
-  {
-    id: "name",
-    text: "What's your name?",
-    type: "text" as QuestionType,
-  },
-  {
-    id: "email",
-    text: "What's your email address?",
-    type: "email" as QuestionType,
-  },
-  {
-    id: "experience",
-    text: "How many years of experience do you have?",
-    type: "number-range" as QuestionType,
-    min: 0,
-    max: 20,
-  },
-  {
-    id: "preferred_role",
-    text: "What role are you applying for?",
-    type: "single-select" as QuestionType,
-    options: [
-      { id: "developer", label: "Developer" },
-      { id: "designer", label: "Designer" },
-      { id: "product_manager", label: "Product Manager" },
-      { id: "marketing", label: "Marketing" },
-      { id: "other", label: "Other" },
-    ],
-  },
-  {
-    id: "skills",
-    text: "Which skills do you have? (Select all that apply)",
-    type: "multi-select" as QuestionType,
-    options: [
-      { id: "javascript", label: "JavaScript" },
-      { id: "typescript", label: "TypeScript" },
-      { id: "react", label: "React" },
-      { id: "nextjs", label: "Next.js" },
-      { id: "node", label: "Node.js" },
-      { id: "design", label: "UI/UX Design" },
-    ],
-  },
-  {
-    id: "start_date",
-    text: "When are you available to start?",
-    type: "date" as QuestionType,
-  },
-  {
-    id: "about",
-    text: "Tell us a bit about yourself and why you're interested in this position.",
-    type: "long-text" as QuestionType,
-  },
-];
 export default function ChatForm() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
@@ -159,15 +114,8 @@ export default function ChatForm() {
     api: "/api/chat",
     body: {
       questions: formQuestions,
+      language: "english",
     },
-    initialMessages: [
-      // {
-      //   id: "welcome",
-      //   role: "assistant",
-      //   content:
-      //     "👋 Welcome to our interactive form! I'll guide you through a series of questions. Let's start with the first one: What's your name?",
-      // },
-    ],
     onFinish: (message) => {
       try {
       } catch (error) {
@@ -176,60 +124,6 @@ export default function ChatForm() {
     },
   });
 
-  // Custom submit handler that ensures questions are loaded
-  // const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-  //   e.preventDefault();
-
-  //   // Check if questions are loaded before submitting
-  //   if (formQuestions.length === 0) {
-  //     console.warn(
-  //       "Form questions not loaded yet. Waiting before submitting..."
-  //     );
-
-  //     // Add a temporary loading message
-  //     append({
-  //       id: "temp-loading",
-  //       role: "assistant",
-  //       content: "Loading your questions... Please wait a moment.",
-  //     });
-
-  //     // Wait for questions to load (max 5 seconds)
-  //     let attempts = 0;
-  //     const checkQuestionsLoaded = setInterval(() => {
-  //       attempts++;
-
-  //       if (formQuestions.length > 0) {
-  //         // Questions loaded, clear the interval and submit
-  //         clearInterval(checkQuestionsLoaded);
-  //         console.log("Questions loaded, now submitting the message");
-
-  //         // Remove temporary message
-  //         const filteredMessages = messages.filter(
-  //           (msg) => msg.id !== "temp-loading"
-  //         );
-
-  //         // Process the form submission with the actual questions
-  //         rawHandleSubmit(e);
-  //       } else if (attempts >= 10) {
-  //         // Give up after 10 attempts (5 seconds)
-  //         clearInterval(checkQuestionsLoaded);
-  //         console.error("Failed to load questions after multiple attempts");
-
-  //         // Update the message to inform the user
-  //         append({
-  //           role: "assistant",
-  //           content:
-  //             "Sorry, I'm having trouble loading the form questions. Please refresh the page and try again.",
-  //         });
-  //       }
-  //     }, 500); // Check every 500ms
-  //   } else {
-  //     // Questions already loaded, proceed normally
-  //     rawHandleSubmit(e);
-  //   }
-  // };
-
-  //   Scroll to bottom when messages change
   //   Scroll to bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -308,130 +202,61 @@ export default function ChatForm() {
     console.log("Submitting form input...");
     if (!currentQuestion) return;
 
-    let value: string | number | Date | string[] | any;
-    let isValid = true;
-    if (inputValue && typeof inputValue === "string") {
-      value = inputValue;
-    }
+    // Validation function mapping
+    const validationMap: Record<string, (value: any) => { isValid: boolean; error: string | null }> = {
+      "single-select": validateSingleSelect,
+      dropdown: validateDropdown,
+      "multi-select": validateMultiSelect,
+      "number-range": validateNumberRange,
+      date: validateDate,
+      text: validateText,
+      "long-text": validateLongText,
+      email: validateEmail,
+    };
 
+    // Get value based on question type
+    let value: any = "";
     switch (currentQuestion.type) {
       case "single-select":
-        value = singleSelectValue;
-        isValid = !!value;
-        if (!isValid) {
-          setValidationErrors((prev) => ({
-            ...prev,
-            singleSelect: "Please select an option.",
-          }));
-        } else {
-          setValidationErrors((prev) => ({
-            ...prev,
-            singleSelect: null,
-          }));
-        }
-        break;
       case "dropdown":
         value = singleSelectValue;
-        isValid = !!value;
-        if (!isValid) {
-          setValidationErrors((prev) => ({
-            ...prev,
-            dropdown: "Please select an option.",
-          }));
-        } else {
-          setValidationErrors((prev) => ({
-            ...prev,
-            dropdown: null,
-          }));
-        }
         break;
       case "multi-select":
         value = multiSelectValue;
-        isValid = multiSelectValue.length > 0;
-        if (!isValid) {
-          setValidationErrors((prev) => ({
-            ...prev,
-            multiSelect: "Please select at least one option.",
-          }));
-        } else {
-          setValidationErrors((prev) => ({
-            ...prev,
-            multiSelect: null,
-          }));
-        }
         break;
       case "number-range":
         value = numberValue[0];
-        isValid = true;
         break;
       case "date":
         value = dateValue;
-        isValid = !!dateValue;
-        if (!isValid) {
-          setValidationErrors((prev) => ({
-            ...prev,
-            date: "Please select a date.",
-          }));
-        } else {
-          setValidationErrors((prev) => ({
-            ...prev,
-            date: null,
-          }));
-        }
         break;
       case "text":
-        value = value || textValue;
-        isValid = !!value.trim();
-        if (!isValid) {
-          setValidationErrors((prev) => ({
-            ...prev,
-            text: "This field is required.",
-          }));
-        } else {
-          setValidationErrors((prev) => ({
-            ...prev,
-            text: null,
-          }));
-        }
-        break;
-
       case "long-text":
         value = value || textValue;
-        isValid = value.trim().length >= 10;
-        if (!isValid) {
-          setValidationErrors((prev) => ({
-            ...prev,
-            longText: value.trim()
-              ? "Please enter at least 10 characters."
-              : "This field is required.",
-          }));
-        } else {
-          setValidationErrors((prev) => ({
-            ...prev,
-            longText: null,
-          }));
-        }
         break;
       case "email":
         value = value || emailValue;
-        isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-        if (!isValid) {
-          setValidationErrors((prev) => ({
-            ...prev,
-            email: "Please enter a valid email address.",
-          }));
-        } else {
-          setValidationErrors((prev) => ({
-            ...prev,
-            email: null,
-          }));
-        }
         break;
+      default:
+        value = value;
     }
 
+    // Validate using the mapped function
+    const validateFn = validationMap[currentQuestion.type];
+    const { isValid, error } = validateFn ? validateFn(value) : { isValid: true, error: null };
+
+    // Set validation errors
     if (!isValid) {
-      // Show validation error
+      setValidationErrors((prev) => ({
+        ...prev,
+        [currentQuestion.type === "long-text" ? "longText" : currentQuestion.type.replace("-", "")]: error,
+      }));
       return;
+    } else {
+      setValidationErrors((prev) => ({
+        ...prev,
+        [currentQuestion.type === "long-text" ? "longText" : currentQuestion.type.replace("-", "")]: null,
+      }));
     }
 
     // Update form responses
@@ -593,31 +418,6 @@ export default function ChatForm() {
               </p>
             )}
           </div>
-          //   <div className="space-y-2 mt-4">
-          //     {currentQuestion.options?.map((option) => (
-          //       <div key={option.id} className="flex items-center space-x-2">
-          //         <Checkbox
-          //           id={option.id}
-          //           checked={multiSelectValue.includes(option.id)}
-          //           onCheckedChange={(checked) => {
-          //             if (checked) {
-          //               setMultiSelectValue([...multiSelectValue, option.id]);
-          //             } else {
-          //               setMultiSelectValue(
-          //                 multiSelectValue.filter((id) => id !== option.id)
-          //               );
-          //             }
-          //           }}
-          //         />
-          //         <Label htmlFor={option.id}>{option.label}</Label>
-          //       </div>
-          //     ))}
-          //     {validationErrors.multiSelect && (
-          //       <p className="text-red-500 text-sm mt-2">
-          //         {validationErrors.multiSelect}
-          //       </p>
-          //     )}
-          //   </div>
         );
 
       case "number-range":
@@ -727,12 +527,8 @@ export default function ChatForm() {
   };
 
   const onGetStartedButton = () => {
-    // if (formQuestions.length === 0) {
-    //   setErrorPage(true);
-    //   return;
-    // }
 
-    const requiresEmail = survey?.settings?.defaults?.collectEmailByDefault;
+    const requiresEmail = survey?.settings?.responses?.collectEmail;
 
     if (requiresEmail) {
       if (!emailValue || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
@@ -816,7 +612,7 @@ export default function ChatForm() {
             survey?.description ||
             "Please complete this form to provide your feedback."
           }
-          showEmailInput={survey?.settings?.defaults?.collectEmailByDefault}
+          showEmailInput={survey?.settings?.responses?.collectEmail}
           emailValue={emailValue}
           onEmailChange={(e) => setEmailValue(e?.target?.value)}
           emailError={validationErrors?.email}
@@ -996,4 +792,3 @@ export default function ChatForm() {
     </div>
   );
 }
-``;

@@ -68,6 +68,8 @@ export async function POST(req: Request) {
   // Track which question we're on based on the number of user responses
   const userMessageCount = messages.filter((m) => m.role === "user").length;
 
+  
+
   // Get the current question or indicate form is complete
   let systemPrompt = "";
   if (userMessageCount < formQuestions.length) {
