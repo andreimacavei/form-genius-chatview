@@ -21,8 +21,16 @@ import {
   validateEmail,
 } from "../../lib/validation";
 
-import { SingleSelectInput, DropdownInput, MultiSelectInput, NumberRangeInput, DateInput, TextInput, LongTextInput, EmailInput } from "@/components/question-inputs";
-
+import {
+  SingleSelectInput,
+  DropdownInput,
+  MultiSelectInput,
+  NumberRangeInput,
+  DateInput,
+  TextInput,
+  LongTextInput,
+  EmailInput,
+} from "@/components/question-inputs";
 
 // Define question types
 type QuestionType =
@@ -187,7 +195,10 @@ export default function ChatForm() {
     if (!currentQuestion) return;
 
     // Validation function mapping
-    const validationMap: Record<string, (value: any) => { isValid: boolean; error: string | null }> = {
+    const validationMap: Record<
+      string,
+      (value: any) => { isValid: boolean; error: string | null }
+    > = {
       "single-select": validateSingleSelect,
       dropdown: validateDropdown,
       "multi-select": validateMultiSelect,
@@ -227,19 +238,25 @@ export default function ChatForm() {
 
     // Validate using the mapped function
     const validateFn = validationMap[currentQuestion.type];
-    const { isValid, error } = validateFn ? validateFn(value) : { isValid: true, error: null };
+    const { isValid, error } = validateFn
+      ? validateFn(value)
+      : { isValid: true, error: null };
 
     // Set validation errors
     if (!isValid) {
       setValidationErrors((prev) => ({
         ...prev,
-        [currentQuestion.type === "long-text" ? "longText" : currentQuestion.type.replace("-", "")]: error,
+        [currentQuestion.type === "long-text"
+          ? "longText"
+          : currentQuestion.type.replace("-", "")]: error,
       }));
       return;
     } else {
       setValidationErrors((prev) => ({
         ...prev,
-        [currentQuestion.type === "long-text" ? "longText" : currentQuestion.type.replace("-", "")]: null,
+        [currentQuestion.type === "long-text"
+          ? "longText"
+          : currentQuestion.type.replace("-", "")]: null,
       }));
     }
 
@@ -332,7 +349,9 @@ export default function ChatForm() {
           <SingleSelectInput
             value={singleSelectValue}
             onChange={setSingleSelectValue}
-            options={(currentQuestion.options || []).map((o) => typeof o === 'string' ? o : o.label)}
+            options={(currentQuestion.options || []).map((o) =>
+              typeof o === "string" ? o : o.label
+            )}
             error={validationErrors.singleSelect}
           />
         );
@@ -341,7 +360,9 @@ export default function ChatForm() {
           <DropdownInput
             value={singleSelectValue}
             onChange={setSingleSelectValue}
-            options={(currentQuestion.options || []).map((o) => typeof o === 'string' ? o : o.label)}
+            options={(currentQuestion.options || []).map((o) =>
+              typeof o === "string" ? o : o.label
+            )}
             error={validationErrors.dropdown}
           />
         );
@@ -350,7 +371,9 @@ export default function ChatForm() {
           <MultiSelectInput
             value={multiSelectValue}
             onChange={setMultiSelectValue}
-            options={(currentQuestion.options || []).map((o) => typeof o === 'string' ? o : o.label)}
+            options={(currentQuestion.options || []).map((o) =>
+              typeof o === "string" ? o : o.label
+            )}
             error={validationErrors.multiSelect}
           />
         );
@@ -402,7 +425,6 @@ export default function ChatForm() {
   };
 
   const onGetStartedButton = () => {
-
     const requiresEmail = survey?.settings?.responses?.collectEmail;
 
     if (requiresEmail) {
@@ -626,7 +648,6 @@ export default function ChatForm() {
             className="bg-white rounded-lg shadow-md p-4 mb-9 mx-[2.8rem]"
             // style={{ marginLeft: "3.2rem", marginRight: "3.2rem" }}
           >
-            <h3 className="font-medium mb-2">{currentQuestion.title}</h3>
             {renderQuestionInput()}
             <Button className="mt-4 w-full" onClick={() => submitFormInput()}>
               Submit Answer

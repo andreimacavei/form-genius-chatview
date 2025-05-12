@@ -8,15 +8,19 @@ interface EmailInputProps {
   placeholder?: string;
 }
 
-export const EmailInput: React.FC<EmailInputProps> = ({ value, onChange, error, placeholder }) => (
+export const EmailInput: React.FC<EmailInputProps> = ({
+  value,
+  onChange,
+  error,
+  placeholder,
+}) => (
   <>
     <Input
       type="email"
       value={value}
       onChange={onChange}
-      className="mt-4"
       placeholder={placeholder || "your@email.com"}
     />
     {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
   </>
-); 
+);

@@ -8,8 +8,13 @@ interface NumberRangeInputProps {
   max: number;
 }
 
-export const NumberRangeInput: React.FC<NumberRangeInputProps> = ({ value, onChange, min, max }) => (
-  <div className="space-y-4 mt-4">
+export const NumberRangeInput: React.FC<NumberRangeInputProps> = ({
+  value,
+  onChange,
+  min,
+  max,
+}) => (
+  <div className="space-y-4 ">
     <Slider
       value={value}
       min={min}
@@ -23,4 +28,4 @@ export const NumberRangeInput: React.FC<NumberRangeInputProps> = ({ value, onCha
       <span>{max}</span>
     </div>
   </div>
-); 
+);

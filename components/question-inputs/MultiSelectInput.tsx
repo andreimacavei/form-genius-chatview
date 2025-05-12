@@ -9,8 +9,13 @@ interface MultiSelectInputProps {
   error?: string | null;
 }
 
-export const MultiSelectInput: React.FC<MultiSelectInputProps> = ({ value, onChange, options, error }) => (
-  <div className="space-y-2 mt-4">
+export const MultiSelectInput: React.FC<MultiSelectInputProps> = ({
+  value,
+  onChange,
+  options,
+  error,
+}) => (
+  <div className="space-y-2 ">
     {options.map((option) => (
       <div key={option} className="flex items-center space-x-2">
         <Checkbox
@@ -29,4 +34,4 @@ export const MultiSelectInput: React.FC<MultiSelectInputProps> = ({ value, onCha
     ))}
     {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
   </div>
-); 
+);

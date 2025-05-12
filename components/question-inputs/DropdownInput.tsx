@@ -1,4 +1,10 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import React from "react";
 
 interface DropdownInputProps {
@@ -8,10 +14,15 @@ interface DropdownInputProps {
   error?: string | null;
 }
 
-export const DropdownInput: React.FC<DropdownInputProps> = ({ value, onChange, options, error }) => (
+export const DropdownInput: React.FC<DropdownInputProps> = ({
+  value,
+  onChange,
+  options,
+  error,
+}) => (
   <>
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger className="w-full mt-4">
+      <SelectTrigger className="w-full ">
         <SelectValue placeholder="Select an option" />
       </SelectTrigger>
       <SelectContent>
@@ -24,4 +35,4 @@ export const DropdownInput: React.FC<DropdownInputProps> = ({ value, onChange, o
     </Select>
     {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
   </>
-); 
+);

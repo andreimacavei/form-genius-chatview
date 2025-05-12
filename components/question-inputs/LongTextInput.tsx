@@ -8,15 +8,19 @@ interface LongTextInputProps {
   placeholder?: string;
 }
 
-export const LongTextInput: React.FC<LongTextInputProps> = ({ value, onChange, error, placeholder }) => (
+export const LongTextInput: React.FC<LongTextInputProps> = ({
+  value,
+  onChange,
+  error,
+  placeholder,
+}) => (
   <>
     <Textarea
       value={value}
       onChange={onChange}
-      className="mt-4"
       placeholder={placeholder || "Type your answer..."}
       rows={4}
     />
     {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
   </>
-); 
+);
