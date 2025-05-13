@@ -77,6 +77,7 @@ export default function ChatForm() {
   const [formQuestions, setFormQuestions] = useState<any[]>([]);
   const [survey, setSurvey] = useState<any>(null);
   const [errorPage, setErrorPage] = useState<boolean>(false);
+  const [showQuestionInput, setShowQuestionInput] = useState<boolean>(false);
   const [useConversationalAI, setUseConversationalAI] =
     useState<boolean>(false);
   const [validationErrors, setValidationErrors] = useState<{
@@ -311,7 +312,7 @@ export default function ChatForm() {
 
       // Add the user's answer
       append(userMessage);
-
+      setShowQuestionInput(false);
       if (!useConversationalAI) {
         setIsThinking(true);
         setTimeout(() => {
@@ -321,9 +322,15 @@ export default function ChatForm() {
           });
           setCurrentQuestion(nextQuestion);
           setIsThinking(false);
+          setTimeout(() => {
+            setShowQuestionInput(true);
+          }, 1000);
         }, 1000);
       } else {
         setCurrentQuestion(nextQuestion);
+        setTimeout(() => {
+          setShowQuestionInput(true);
+        }, 1000);
       }
     } else {
       // This was the last question
@@ -482,6 +489,9 @@ export default function ChatForm() {
 
         setProgress((1 / formQuestions.length) * 100);
       }
+      setTimeout(() => {
+        setShowQuestionInput(true);
+      }, 1000);
       setIsThinking(false);
     }, 2000);
   };
@@ -604,7 +614,7 @@ export default function ChatForm() {
           <div ref={messagesEndRef} />
         </div>
 
-        {(isLoading || isThinking) && (
+        {(isLoading || isThinking || !showQuestionInput) && (
           <div className="flex justify-start mb-4">
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center h-8 w-8 bg-primary rounded-full p-1.5">
@@ -670,7 +680,7 @@ export default function ChatForm() {
               </p>
             </div>
           </div>
-        ) : currentQuestion ? (
+        ) : currentQuestion && showQuestionInput ? (
           <div
             className="bg-white rounded-lg shadow-md p-4 mb-9 mx-[2.8rem]"
             // style={{ marginLeft: "3.2rem", marginRight: "3.2rem" }}
