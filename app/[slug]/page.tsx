@@ -261,17 +261,15 @@ export default function ChatForm() {
     if (!isValid) {
       setValidationErrors((prev) => ({
         ...prev,
-        [currentQuestion.type === "long-text"
-          ? "longText"
-          : currentQuestion.type.replace("-", "")]: error,
+        [currentQuestion.type.replace(/-([a-z])/g, (_, c) => c.toUpperCase())]:
+          error,
       }));
       return;
     } else {
       setValidationErrors((prev) => ({
         ...prev,
-        [currentQuestion.type === "long-text"
-          ? "longText"
-          : currentQuestion.type.replace("-", "")]: null,
+        [currentQuestion.type.replace(/-([a-z])/g, (_, c) => c.toUpperCase())]:
+          null,
       }));
     }
 
