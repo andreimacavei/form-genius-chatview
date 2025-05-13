@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { useParams } from "next/navigation";
 import { SurveyNotFound } from "@/components/survey-not-found";
 import SplashScreen from "@/components/splash-screen";
+import { useDumbChat } from "@/hooks/use-dumb-chat";
 import {
   validateSingleSelect,
   validateDropdown,
@@ -76,6 +77,8 @@ export default function ChatForm() {
   const [formQuestions, setFormQuestions] = useState<any[]>([]);
   const [survey, setSurvey] = useState<any>(null);
   const [errorPage, setErrorPage] = useState<boolean>(false);
+  const [useConversationalAI, setUseConversationalAI] =
+    useState<boolean>(false);
   const [validationErrors, setValidationErrors] = useState<{
     email: string | null;
     singleSelect: string | null;
@@ -95,14 +98,8 @@ export default function ChatForm() {
   });
   const [isSurveyLoading, setIsSurveyLoading] = useState<boolean>(true);
   const [isThinking, setIsThinking] = useState<boolean>(false);
-  const {
-    messages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    append,
-    isLoading,
-  } = useChat({
+
+  const smartChat = useChat({
     api: "/api/chat",
     body: {
       questions: formQuestions,
@@ -115,6 +112,17 @@ export default function ChatForm() {
       }
     },
   });
+
+  const dumbChat = useDumbChat({ questions: formQuestions });
+
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    append,
+    isLoading,
+  } = useConversationalAI ? smartChat : dumbChat;
 
   //   Scroll to bottom when messages change
   useEffect(() => {
@@ -136,6 +144,9 @@ export default function ChatForm() {
           const data = await response.json();
           if (data.response) {
             setSurvey(data?.response);
+            const useAI = data?.response?.settings?.presentation?.useAI;
+            setUseConversationalAI(useAI);
+
             if (data.response.survey_questions.length > 0) {
               mapApiSurveysAsFormQuestions(data.response.survey_questions);
             }
@@ -187,7 +198,10 @@ export default function ChatForm() {
   const customHandleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     submitFormInput(input);
-    handleSubmit(e);
+
+    if (useConversationalAI) {
+      handleSubmit(e);
+    }
   };
 
   const submitFormInput = (inputValue?: string) => {
@@ -295,19 +309,22 @@ export default function ChatForm() {
       // There's a next question
       const nextQuestion = formQuestions[currentIndex + 1];
 
-      // Add the user's answer and then the next question from the assistant
+      // Add the user's answer
       append(userMessage);
 
-      // Wait a moment before showing the next question to ensure user message renders
-      // setTimeout(() => {
-      //   append({
-      //     role: "assistant",
-      //     content: `Thank you! ${nextQuestion.title}`,
-      //   });
-
-      //   // Set the next question as current
-      setCurrentQuestion(nextQuestion);
-      // }, 100);
+      if (!useConversationalAI) {
+        setIsThinking(true);
+        setTimeout(() => {
+          append({
+            role: "assistant",
+            content: nextQuestion.title,
+          });
+          setCurrentQuestion(nextQuestion);
+          setIsThinking(false);
+        }, 1000);
+      } else {
+        setCurrentQuestion(nextQuestion);
+      }
     } else {
       // This was the last question
       append(userMessage);
@@ -449,10 +466,20 @@ export default function ChatForm() {
     setTimeout(() => {
       if (formQuestions.length > 0) {
         setCurrentQuestion(formQuestions[0]);
-        append({
-          role: "assistant",
-          content: `👋 Welcome to our interactive form! I'll guide you through a series of questions. Let's start with the first one: ${formQuestions[0].title}`,
-        });
+
+        // Different welcome messages based on AI mode
+        if (useConversationalAI) {
+          append({
+            role: "assistant",
+            content: `👋 Welcome to our interactive form! I'll guide you through a series of questions. Let's start with the first one: ${formQuestions[0].title}`,
+          });
+        } else {
+          append({
+            role: "assistant",
+            content: formQuestions[0].title,
+          });
+        }
+
         setProgress((1 / formQuestions.length) * 100);
       }
       setIsThinking(false);
