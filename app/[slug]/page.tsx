@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { useParams } from "next/navigation";
 import { SurveyNotFound } from "@/components/survey-not-found";
 import SplashScreen from "@/components/splash-screen";
+import { useDumbChat } from "@/hooks/use-dumb-chat";
 import {
   validateSingleSelect,
   validateDropdown,
@@ -21,8 +22,16 @@ import {
   validateEmail,
 } from "../../lib/validation";
 
-import { SingleSelectInput, DropdownInput, MultiSelectInput, NumberRangeInput, DateInput, TextInput, LongTextInput, EmailInput } from "@/components/question-inputs";
-
+import {
+  SingleSelectInput,
+  DropdownInput,
+  MultiSelectInput,
+  NumberRangeInput,
+  DateInput,
+  TextInput,
+  LongTextInput,
+  EmailInput,
+} from "@/components/question-inputs";
 
 // Define question types
 type QuestionType =
@@ -68,6 +77,9 @@ export default function ChatForm() {
   const [formQuestions, setFormQuestions] = useState<any[]>([]);
   const [survey, setSurvey] = useState<any>(null);
   const [errorPage, setErrorPage] = useState<boolean>(false);
+  const [showQuestionInput, setShowQuestionInput] = useState<boolean>(false);
+  const [useConversationalAI, setUseConversationalAI] =
+    useState<boolean>(false);
   const [validationErrors, setValidationErrors] = useState<{
     email: string | null;
     singleSelect: string | null;
@@ -87,14 +99,8 @@ export default function ChatForm() {
   });
   const [isSurveyLoading, setIsSurveyLoading] = useState<boolean>(true);
   const [isThinking, setIsThinking] = useState<boolean>(false);
-  const {
-    messages,
-    input,
-    handleInputChange,
-    handleSubmit,
-    append,
-    isLoading,
-  } = useChat({
+
+  const smartChat = useChat({
     api: "/api/chat",
     body: {
       questions: formQuestions,
@@ -107,6 +113,17 @@ export default function ChatForm() {
       }
     },
   });
+
+  const dumbChat = useDumbChat({ questions: formQuestions });
+
+  const {
+    messages,
+    input,
+    handleInputChange,
+    handleSubmit,
+    append,
+    isLoading,
+  } = useConversationalAI ? smartChat : dumbChat;
 
   //   Scroll to bottom when messages change
   useEffect(() => {
@@ -128,6 +145,9 @@ export default function ChatForm() {
           const data = await response.json();
           if (data.response) {
             setSurvey(data?.response);
+            const useAI = data?.response?.settings?.presentation?.useAI;
+            setUseConversationalAI(useAI);
+
             if (data.response.survey_questions.length > 0) {
               mapApiSurveysAsFormQuestions(data.response.survey_questions);
             }
@@ -179,7 +199,10 @@ export default function ChatForm() {
   const customHandleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     submitFormInput(input);
-    handleSubmit(e);
+
+    if (useConversationalAI) {
+      handleSubmit(e);
+    }
   };
 
   const submitFormInput = (inputValue?: string) => {
@@ -187,7 +210,10 @@ export default function ChatForm() {
     if (!currentQuestion) return;
 
     // Validation function mapping
-    const validationMap: Record<string, (value: any) => { isValid: boolean; error: string | null }> = {
+    const validationMap: Record<
+      string,
+      (value: any) => { isValid: boolean; error: string | null }
+    > = {
       "single-select": validateSingleSelect,
       dropdown: validateDropdown,
       "multi-select": validateMultiSelect,
@@ -227,19 +253,23 @@ export default function ChatForm() {
 
     // Validate using the mapped function
     const validateFn = validationMap[currentQuestion.type];
-    const { isValid, error } = validateFn ? validateFn(value) : { isValid: true, error: null };
+    const { isValid, error } = validateFn
+      ? validateFn(value)
+      : { isValid: true, error: null };
 
     // Set validation errors
     if (!isValid) {
       setValidationErrors((prev) => ({
         ...prev,
-        [currentQuestion.type === "long-text" ? "longText" : currentQuestion.type.replace("-", "")]: error,
+        [currentQuestion.type.replace(/-([a-z])/g, (_, c) => c.toUpperCase())]:
+          error,
       }));
       return;
     } else {
       setValidationErrors((prev) => ({
         ...prev,
-        [currentQuestion.type === "long-text" ? "longText" : currentQuestion.type.replace("-", "")]: null,
+        [currentQuestion.type.replace(/-([a-z])/g, (_, c) => c.toUpperCase())]:
+          null,
       }));
     }
 
@@ -278,19 +308,28 @@ export default function ChatForm() {
       // There's a next question
       const nextQuestion = formQuestions[currentIndex + 1];
 
-      // Add the user's answer and then the next question from the assistant
+      // Add the user's answer
       append(userMessage);
-
-      // Wait a moment before showing the next question to ensure user message renders
-      // setTimeout(() => {
-      //   append({
-      //     role: "assistant",
-      //     content: `Thank you! ${nextQuestion.title}`,
-      //   });
-
-      //   // Set the next question as current
-      setCurrentQuestion(nextQuestion);
-      // }, 100);
+      setShowQuestionInput(false);
+      if (!useConversationalAI) {
+        setIsThinking(true);
+        setTimeout(() => {
+          append({
+            role: "assistant",
+            content: nextQuestion.title,
+          });
+          setCurrentQuestion(nextQuestion);
+          setIsThinking(false);
+          setTimeout(() => {
+            setShowQuestionInput(true);
+          }, 1000);
+        }, 1000);
+      } else {
+        setCurrentQuestion(nextQuestion);
+        setTimeout(() => {
+          setShowQuestionInput(true);
+        }, 1000);
+      }
     } else {
       // This was the last question
       append(userMessage);
@@ -332,7 +371,9 @@ export default function ChatForm() {
           <SingleSelectInput
             value={singleSelectValue}
             onChange={setSingleSelectValue}
-            options={(currentQuestion.options || []).map((o) => typeof o === 'string' ? o : o.label)}
+            options={(currentQuestion.options || []).map((o) =>
+              typeof o === "string" ? o : o.label
+            )}
             error={validationErrors.singleSelect}
           />
         );
@@ -341,7 +382,9 @@ export default function ChatForm() {
           <DropdownInput
             value={singleSelectValue}
             onChange={setSingleSelectValue}
-            options={(currentQuestion.options || []).map((o) => typeof o === 'string' ? o : o.label)}
+            options={(currentQuestion.options || []).map((o) =>
+              typeof o === "string" ? o : o.label
+            )}
             error={validationErrors.dropdown}
           />
         );
@@ -350,7 +393,9 @@ export default function ChatForm() {
           <MultiSelectInput
             value={multiSelectValue}
             onChange={setMultiSelectValue}
-            options={(currentQuestion.options || []).map((o) => typeof o === 'string' ? o : o.label)}
+            options={(currentQuestion.options || []).map((o) =>
+              typeof o === "string" ? o : o.label
+            )}
             error={validationErrors.multiSelect}
           />
         );
@@ -402,7 +447,6 @@ export default function ChatForm() {
   };
 
   const onGetStartedButton = () => {
-
     const requiresEmail = survey?.settings?.responses?.collectEmail;
 
     if (requiresEmail) {
@@ -427,12 +471,25 @@ export default function ChatForm() {
     setTimeout(() => {
       if (formQuestions.length > 0) {
         setCurrentQuestion(formQuestions[0]);
-        append({
-          role: "assistant",
-          content: `👋 Welcome to our interactive form! I'll guide you through a series of questions. Let's start with the first one: ${formQuestions[0].title}`,
-        });
+
+        // Different welcome messages based on AI mode
+        if (useConversationalAI) {
+          append({
+            role: "assistant",
+            content: `👋 Welcome to our interactive form! I'll guide you through a series of questions. Let's start with the first one: ${formQuestions[0].title}`,
+          });
+        } else {
+          append({
+            role: "assistant",
+            content: formQuestions[0].title,
+          });
+        }
+
         setProgress((1 / formQuestions.length) * 100);
       }
+      setTimeout(() => {
+        setShowQuestionInput(true);
+      }, 1000);
       setIsThinking(false);
     }, 2000);
   };
@@ -555,7 +612,7 @@ export default function ChatForm() {
           <div ref={messagesEndRef} />
         </div>
 
-        {(isLoading || isThinking) && (
+        {(isLoading || isThinking || !showQuestionInput) && (
           <div className="flex justify-start mb-4">
             <div className="flex items-center gap-3">
               <div className="flex items-center justify-center h-8 w-8 bg-primary rounded-full p-1.5">
@@ -621,12 +678,11 @@ export default function ChatForm() {
               </p>
             </div>
           </div>
-        ) : currentQuestion ? (
+        ) : currentQuestion && showQuestionInput ? (
           <div
             className="bg-white rounded-lg shadow-md p-4 mb-9 mx-[2.8rem]"
             // style={{ marginLeft: "3.2rem", marginRight: "3.2rem" }}
           >
-            <h3 className="font-medium mb-2">{currentQuestion.title}</h3>
             {renderQuestionInput()}
             <Button className="mt-4 w-full" onClick={() => submitFormInput()}>
               Submit Answer

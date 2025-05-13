@@ -12,8 +12,12 @@ interface DateInputProps {
   error?: string | null;
 }
 
-export const DateInput: React.FC<DateInputProps> = ({ value, onChange, error }) => (
-  <div className="mt-4">
+export const DateInput: React.FC<DateInputProps> = ({
+  value,
+  onChange,
+  error,
+}) => (
+  <div className="">
     <Popover>
       <PopoverTrigger asChild>
         <Button
@@ -38,4 +42,4 @@ export const DateInput: React.FC<DateInputProps> = ({ value, onChange, error }) 
     </Popover>
     {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
   </div>
-); 
+);
