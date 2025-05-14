@@ -62,7 +62,7 @@ const formQuestionsArray = [
 
 export async function POST(req: Request) {
   const { messages, questions } = await req.json();
-  console.log("Received messages:", messages);
+
   // Use questions from the request instead of the hardcoded ones
   const formQuestions = questions || formQuestionsArray;
   // Track which question we're on based on the number of user responses
