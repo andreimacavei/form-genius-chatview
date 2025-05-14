@@ -59,6 +59,7 @@ interface Question {
     min: number;
     max: number;
   };
+  required?: boolean;
 }
 
 export default function ChatForm() {
@@ -197,7 +198,6 @@ export default function ChatForm() {
       return question;
     });
 
-    console.log(questions, "Mapped questions");
     setFormQuestions(questions);
 
     // Loading is complete
@@ -214,7 +214,6 @@ export default function ChatForm() {
   };
 
   const submitFormInput = (inputValue?: string) => {
-    console.log("Submitting form input...");
     if (!currentQuestion) return;
 
     // Validation function mapping
@@ -342,7 +341,6 @@ export default function ChatForm() {
 
     // Update the list of responses
     setFormResponsesList(prev => [...prev, responseItem]);
-    console.log("Saved response:", responseItem);
 
     // Add user message
     let displayValue = value;
@@ -411,9 +409,7 @@ export default function ChatForm() {
         
         setTimeout(() => {
           setIsFormComplete(true);
-          // Remove this log since we're now using useEffect
-          // console.log("All responses:", formResponsesList);
-        }, 5000);
+        }, 3000);
       }, 500);
     }
 
@@ -635,10 +631,106 @@ export default function ChatForm() {
   // Add useEffect to log all responses and submit to API when form is complete
   useEffect(() => {
     if (isFormComplete) {
-      console.log("All responses (complete):", formResponsesList);
       submitResponsesToAPI();
     }
   }, [isFormComplete, formResponsesList]);
+
+  // Add skipQuestion function
+  const skipQuestion = () => {
+    if (!currentQuestion) return;
+
+    // Get current question index
+    const currentIndex = formQuestions.findIndex((q) => {
+      if (currentQuestion?.order && q?.order) {
+        return q.order === currentQuestion.order;
+      } else if (currentQuestion?.number && q?.number) {
+        return q.number === currentQuestion.number;
+      }
+      return false;
+    });
+
+    // Add user message indicating they skipped
+    const userMessage: any = {
+      role: "user",
+      content: "[Skipped]",
+    };
+    append(userMessage);
+    setShowQuestionInput(false);
+
+    // Save skipped response to formResponsesList
+    const mapQuestionType = (type: string): string => {
+      switch (type) {
+        case "single-select": return "radio";
+        case "multi-select": return "checkboxes";
+        case "number-range": return "linear-scale";
+        case "text":
+        case "long-text":
+          return "text";
+        default: return type;
+      }
+    };
+    let optionChosed: number | number[] = 0;
+    if (currentQuestion.type === "multi-select") {
+      optionChosed = [];
+    }
+    const responseItem = {
+      optionChosed,
+      questionType: mapQuestionType(currentQuestion.type),
+      optionResponse: null,
+      questionNumber: currentQuestion.number || parseInt(currentQuestion.order) || 0
+    };
+    setFormResponsesList(prev => [...prev, responseItem]);
+
+    if (currentIndex < formQuestions.length - 1) {
+      // There's a next question
+      const nextQuestion = formQuestions[currentIndex + 1];
+
+      if (!useConversationalAI) {
+        setIsThinking(true);
+        setTimeout(() => {
+          append({
+            role: "assistant",
+            content: nextQuestion.title,
+          });
+          setCurrentQuestion(nextQuestion);
+          setIsThinking(false);
+          setTimeout(() => {
+            setShowQuestionInput(true);
+          }, 1000);
+        }, 1000);
+      } else {
+        setCurrentQuestion(nextQuestion);
+        setTimeout(() => {
+          setShowQuestionInput(true);
+        }, 1000);
+      }
+    } else {
+      // This was the last question
+      setTimeout(() => {
+        append({
+          role: "assistant",
+          content:
+            "Thank you for completing all the questions! Your responses have been recorded.",
+        });
+        setCurrentQuestion(null);
+        setTimeout(() => {
+          setIsFormComplete(true);
+        }, 3000);
+      }, 500);
+    }
+
+    // Reset input values
+    setSingleSelectValue("");
+    setMultiSelectValue([]);
+    setNumberValue([5]);
+    setDateValue(undefined);
+    setTextValue("");
+    setEmailValue("");
+
+    // Update progress
+    const nextProgress = ((currentIndex + 2) / formQuestions.length) * 100;
+    setProgress(nextProgress);
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
@@ -808,9 +900,20 @@ export default function ChatForm() {
             // style={{ marginLeft: "3.2rem", marginRight: "3.2rem" }}
           >
             {renderQuestionInput()}
-            <Button className="mt-4 w-full" onClick={() => submitFormInput()}>
-              Submit Answer
-            </Button>
+            <div className="mt-4 flex gap-2">
+              <Button className="flex-1" onClick={() => submitFormInput()}>
+                Submit Answer
+              </Button>
+              {currentQuestion.required === false && (
+                <Button 
+                  variant="outline" 
+                  className="px-4" 
+                  onClick={skipQuestion}
+                >
+                  Skip
+                </Button>
+              )}
+            </div>
           </div>
         ) : (
           <></>
