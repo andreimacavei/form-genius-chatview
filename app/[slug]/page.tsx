@@ -767,7 +767,7 @@ export default function ChatForm() {
         </div>
       )}
 
-      <div className="flex-1 max-w-2xl mx-auto w-full pb-16 p-4">
+      <div className="flex-1 max-w-2xl mx-auto w-full pb-16 p-4 mt-8">
         <div className="space-y-4 mb-4">
           {messages
             .filter((m) => m.role !== "system")
