@@ -65,6 +65,12 @@ export default function ChatForm() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
   const [formResponses, setFormResponses] = useState<Record<string, any>>({});
+  const [formResponsesList, setFormResponsesList] = useState<Array<{
+    optionChosed: number | number[];
+    questionType: string;
+    optionResponse: string | null;
+    questionNumber: number;
+  }>>([]);
   const [singleSelectValue, setSingleSelectValue] = useState<string>("");
   const [multiSelectValue, setMultiSelectValue] = useState<string[]>([]);
   const [numberValue, setNumberValue] = useState<number[]>([5]);
@@ -99,6 +105,8 @@ export default function ChatForm() {
   });
   const [isSurveyLoading, setIsSurveyLoading] = useState<boolean>(true);
   const [isThinking, setIsThinking] = useState<boolean>(false);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
 
   const smartChat = useChat({
     api: "/api/chat",
@@ -258,19 +266,18 @@ export default function ChatForm() {
       : { isValid: true, error: null };
 
     // Set validation errors
+    // Convert kebab-case to camelCase for the validation error key
+    const errorKey = currentQuestion.type.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+    
+    // Update validation errors based on validation result
+    setValidationErrors((prev) => ({
+      ...prev,
+      [errorKey]: isValid ? null : error,
+    }));
+    
+    // Return early if validation failed
     if (!isValid) {
-      setValidationErrors((prev) => ({
-        ...prev,
-        [currentQuestion.type.replace(/-([a-z])/g, (_, c) => c.toUpperCase())]:
-          error,
-      }));
       return;
-    } else {
-      setValidationErrors((prev) => ({
-        ...prev,
-        [currentQuestion.type.replace(/-([a-z])/g, (_, c) => c.toUpperCase())]:
-          null,
-      }));
     }
 
     // Update form responses
@@ -279,6 +286,63 @@ export default function ChatForm() {
       [currentQuestion.order]: value,
     };
     setFormResponses(updatedResponses);
+
+    // Map the question type to the required format
+    const mapQuestionType = (type: string): string => {
+      switch (type) {
+        case "single-select": return "radio";
+        case "multi-select": return "checkboxes";
+        case "number-range": return "linear-scale";
+        case "text":
+        case "long-text":
+          return "text";
+        default: return type;
+      }
+    };
+
+    // Create formatted response object
+    let optionChosed: number | number[] = 0;
+    let optionResponse: string | null = null;
+
+    if (currentQuestion.type === "single-select" || currentQuestion.type === "dropdown") {
+      // For single select, find the index of the selected option
+      const options = currentQuestion.options || [];
+      const selectedIndex = options.findIndex(o => 
+        (typeof o === 'string' ? o : o.label) === value
+      );
+      optionChosed = selectedIndex !== -1 ? selectedIndex + 1 : 0;
+      optionResponse = null;
+    } else if (currentQuestion.type === "multi-select") {
+      // For multi-select, create an array of selected indices
+      const options = currentQuestion.options || [];
+      optionChosed = value.map((selected: string) => {
+        const index = options.findIndex(o => 
+          (typeof o === 'string' ? o : o.label) === selected
+        );
+        return index !== -1 ? index + 1 : 0;
+      }).filter((idx: number) => idx > 0);
+      optionResponse = null;
+    } else if (currentQuestion.type === "number-range") {
+      optionChosed = value;
+      optionResponse = null;
+    } else if (currentQuestion.type === "text" || currentQuestion.type === "long-text") {
+      optionChosed = 0;
+      optionResponse = value;
+    } else {
+      optionChosed = 0;
+      optionResponse = String(value);
+    }
+
+    const responseItem = {
+      optionChosed,
+      questionType: mapQuestionType(currentQuestion.type),
+      optionResponse: optionChosed === 0 ? optionResponse : null,
+      questionNumber: currentQuestion.number || parseInt(currentQuestion.order) || 0
+    };
+
+    // Update the list of responses
+    setFormResponsesList(prev => [...prev, responseItem]);
+    console.log("Saved response:", responseItem);
 
     // Add user message
     let displayValue = value;
@@ -341,9 +405,14 @@ export default function ChatForm() {
           content:
             "Thank you for completing all the questions! Your responses have been recorded.",
         });
+        
+        // First update the formResponsesList with the final response
         setCurrentQuestion(null);
+        
         setTimeout(() => {
           setIsFormComplete(true);
+          // Remove this log since we're now using useEffect
+          // console.log("All responses:", formResponsesList);
         }, 5000);
       }, 500);
     }
@@ -530,6 +599,47 @@ export default function ChatForm() {
     </div>
   );
 
+  // Add function to submit responses to API
+  const submitResponsesToAPI = async () => {
+    if (formResponsesList.length === 0) return;
+    
+    setIsSubmitting(true);
+    setSubmissionError(null);
+    
+    try {
+      const response = await fetch(`/api/surveys/${slug}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          answers: formResponsesList,
+          email: emailValue || null,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit responses');
+      }
+      
+      console.log('Responses submitted successfully');
+    } catch (error: any) {
+      console.error('Error submitting responses:', error);
+      setSubmissionError(error.message || 'Failed to submit responses');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Add useEffect to log all responses and submit to API when form is complete
+  useEffect(() => {
+    if (isFormComplete) {
+      console.log("All responses (complete):", formResponsesList);
+      submitResponsesToAPI();
+    }
+  }, [isFormComplete, formResponsesList]);
+
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Show loading screen if survey is loading */}
@@ -664,17 +774,31 @@ export default function ChatForm() {
                 Thank you for submitting your information. Your application has
                 been received and will be processed shortly.
               </p>
+              
+              {isSubmitting && (
+                <div className="mb-4 text-gray-600">
+                  <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-current border-r-transparent mr-2 align-[-2px]"></div>
+                  Saving your responses...
+                </div>
+              )}
+              
+              {submissionError && (
+                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
+                  {submissionError}
+                </div>
+              )}
 
               <Button
                 size="lg"
                 className="w-full mb-8"
                 onClick={() => window.location.reload()}
+                disabled={isSubmitting}
               >
                 Start New Form
               </Button>
 
               <p className="text-sm text-gray-500 mt-auto">
-                Powered by FormGenius
+                Powered by <strong>SurveyGenius</strong>
               </p>
             </div>
           </div>
