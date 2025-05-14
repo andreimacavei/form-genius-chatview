@@ -32,6 +32,8 @@ import {
   LongTextInput,
   EmailInput,
 } from "@/components/question-inputs";
+import { Card } from "@/components/ui/card";
+import { AspectRatio } from "@/components/ui/aspect-ratio";
 
 // Define question types
 type QuestionType =
@@ -768,6 +770,19 @@ export default function ChatForm() {
       )}
 
       <div className="flex-1 max-w-2xl mx-auto w-full pb-16 p-4 mt-8">
+        {/* Survey Image Card */}
+        {survey?.image_url && typeof survey.image_url === 'string' && survey.image_url.trim() !== '' && (
+          <Card className="mb-8 overflow-hidden">
+            <AspectRatio ratio={16 / 5}>
+              <img
+                src={survey.image_url}
+                alt={survey.title ? `${survey.title} image` : 'Survey image'}
+                className="object-cover w-full h-full"
+                style={{ borderRadius: '0.5rem', maxHeight: '200px' }}
+              />
+            </AspectRatio>
+          </Card>
+        )}
         <div className="space-y-4 mb-4">
           {messages
             .filter((m) => m.role !== "system")
