@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 export async function GET(request: Request) {
   try {
     const { pathname } = new URL(request.url);
-    // const slug = pathname.split("/")[4]; // Get surveyId from /api/survey/[slug]/pages
     const slug = pathname.split("/").pop();
     const response = await prisma.surveys.findUnique({
       where: { slug },

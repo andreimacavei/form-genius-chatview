@@ -4,10 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import { useChat } from "@ai-sdk/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send, User, Bot } from "lucide-react";
+import { Send, User, Bot, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { SurveyNotFound } from "@/components/survey-not-found";
 import SplashScreen from "@/components/splash-screen";
 import { useDumbChat } from "@/hooks/use-dumb-chat";
@@ -155,12 +155,15 @@ export default function ChatForm() {
         if (response.ok) {
           const data = await response.json();
           if (data.response) {
-            setSurvey(data?.response);
-            const useAI = data?.response?.settings?.presentation?.useAI;
+            setSurvey(data.response);
+            
+            const useAI = data.response.settings?.presentation?.useAI;
             setUseConversationalAI(useAI);
 
+            const showEmail = data.response.settings?.presentation?.showEmailField;
+
             if (data.response.survey_questions.length > 0) {
-              mapApiSurveysAsFormQuestions(data.response.survey_questions);
+              mapApiSurveysAsFormQuestions(data.response.survey_questions, showEmail);
             }
           }
         } else {
@@ -184,7 +187,7 @@ export default function ChatForm() {
   }, [slug]);
 
   // Handle form input submission
-  const mapApiSurveysAsFormQuestions = (surveyQuestions: any) => {
+  const mapApiSurveysAsFormQuestions = (surveyQuestions: any, showEmail: boolean) => {
     const questions = surveyQuestions.map((question: any) => {
       switch (question.type) {
         case "radio":
@@ -200,6 +203,19 @@ export default function ChatForm() {
       return question;
     });
 
+    // If survey.showEmailField is true, add an email question at the end
+    if (showEmail) {
+      questions.push({
+        order: (questions.length + 1).toString(),
+        title: "What is your email address for follow-up or special offers?",
+        type: "email",
+        number: questions.length + 1,
+        required: false,
+      });
+      console.log("Email question added");
+    }
+
+    console.log("Questions", questions);
     setFormQuestions(questions);
 
     // Loading is complete
@@ -400,11 +416,14 @@ export default function ChatForm() {
 
       // Wait a moment before showing the completion message
       setTimeout(() => {
-        append({
-          role: "assistant",
-          content:
-            "Thank you for completing all the questions! Your responses have been recorded.",
-        });
+        
+        if (!useConversationalAI) {
+          append({
+            role: "assistant",
+            content:
+              "Thank you for completing all the questions! Your responses have been recorded.",
+          });
+        }
         
         // First update the formResponsesList with the final response
         setCurrentQuestion(null);
@@ -709,11 +728,13 @@ export default function ChatForm() {
     } else {
       // This was the last question
       setTimeout(() => {
-        append({
-          role: "assistant",
-          content:
-            "Thank you for completing all the questions! Your responses have been recorded.",
-        });
+        if (!useConversationalAI) {
+          append({
+            role: "assistant",
+            content:
+              "Thank you for completing all the questions! Your responses have been recorded.",
+          });
+        }
         setCurrentQuestion(null);
         setTimeout(() => {
           setIsFormComplete(true);
@@ -732,6 +753,14 @@ export default function ChatForm() {
     // Update progress
     const nextProgress = ((currentIndex + 2) / formQuestions.length) * 100;
     setProgress(nextProgress);
+  };
+
+  const router = useRouter();
+
+  // Handler to redirect to dashboard
+  const goToDashboard = () => {
+    const dashboardUrl = process.env.NEXT_PUBLIC_DASHBOARD_URL || "/";
+    window.open(dashboardUrl, "_blank");
   };
 
   return (
@@ -878,8 +907,8 @@ export default function ChatForm() {
                 Form Completed!
               </h2>
               <p className="text-gray-600 mb-8">
-                Thank you for submitting your information. Your application has
-                been received and will be processed shortly.
+                {survey?.settings?.presentation?.confirmationMessage || 
+                 "Thank you for submitting your responses. We'll send you the results to your email address if you provided one."}
               </p>
               
               {isSubmitting && (
@@ -897,16 +926,13 @@ export default function ChatForm() {
 
               <Button
                 size="lg"
-                className="w-full mb-8"
-                onClick={() => window.location.reload()}
+                className="px-8 rounded-full bg-black hover:bg-gray-800 text-white"
+                onClick={goToDashboard}
                 disabled={isSubmitting}
               >
-                Start New Form
+                Create a form with AI <Sparkles className="w-4 h-4 ml-2" />
               </Button>
 
-              <p className="text-sm text-gray-500 mt-auto">
-                Powered by <strong>SurveyGenius</strong>
-              </p>
             </div>
           </div>
         ) : currentQuestion && showQuestionInput ? (
@@ -919,7 +945,7 @@ export default function ChatForm() {
               <Button className="flex-1" onClick={() => submitFormInput()}>
                 Submit Answer
               </Button>
-              {currentQuestion.required === false && (
+              {(currentQuestion.required === false || currentQuestion.required === undefined) && (
                 <Button 
                   variant="outline" 
                   className="px-4" 
@@ -959,6 +985,9 @@ export default function ChatForm() {
                 <Send className="h-4 w-4" />
               </Button>
             </form>
+            <div className="text-xs text-gray-400 text-center mt-2 select-none">
+              Powered by <strong>SurveyGenius</strong>
+            </div>
           </div>
         </div>
       )}
