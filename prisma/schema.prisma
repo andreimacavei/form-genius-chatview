@@ -9,12 +9,16 @@ datasource db {
 }
 
 model profiles {
-  id         String    @id(map: "users_pkey") @db.Uuid
-  email      String    @unique(map: "profiles_email_unique")
-  name       String
-  created_at DateTime? @default(now()) @db.Timestamp(6)
-  updated_at DateTime? @default(now()) @db.Timestamp(6)
-  surveys    surveys[]
+  id                 String               @id(map: "users_pkey") @db.Uuid
+  email              String               @unique(map: "profiles_email_unique")
+  name               String
+  created_at         DateTime?            @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?            @default(now()) @db.Timestamp(6)
+  company            String?
+  website            String?
+  survey_count       Decimal              @default(0) @db.Decimal
+  surveys            surveys[]
+  user_subscriptions user_subscriptions[]
 }
 
 model responses {
@@ -28,20 +32,45 @@ model responses {
 }
 
 model surveys {
-  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  title            String
-  description      String?
-  status           survey_status? @default(draft)
-  created_at       DateTime?      @default(now()) @db.Timestamp(6)
-  updated_at       DateTime?      @default(now()) @db.Timestamp(6)
-  user_id          String         @db.Uuid
-  image_url        String?
-  slug             String         @unique(map: "surveys_slug_unique")
-  survey_questions Json           @default("[]")
-  settings         Json           @default("{\"defaults\": {\"collectEmailByDefault\": true, \"makeQuestionsRequiredByDefault\": false}, \"responses\": {\"collectEmail\": true, \"limitToOneResponse\": false, \"allowResponseEditing\": false}, \"presentation\": {\"viewType\": \"stacked\", \"showProgressBar\": true, \"confirmationMessage\": \"Thank you for completing the survey\", \"shuffleQuestionOrder\": false}}")
-  sections         Json           @default("[]")
-  responses        responses[]
-  profiles         profiles       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "surveys_user_id_profiles_id_fk")
+  id                 String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  title              String
+  description        String?
+  status             survey_status? @default(draft)
+  created_at         DateTime?      @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?      @default(now()) @db.Timestamp(6)
+  user_id            String         @db.Uuid
+  slug               String         @unique(map: "surveys_slug_unique")
+  survey_questions   Json           @default("[]")
+  settings           Json           @default("{\"defaults\": {\"collectEmailByDefault\": true, \"makeQuestionsRequiredByDefault\": false}, \"responses\": {\"collectEmail\": true, \"limitToOneResponse\": false, \"allowResponseEditing\": false}, \"presentation\": {\"viewType\": \"stacked\", \"showEmailField\": true, \"showProgressBar\": true, \"confirmationMessage\": \"Thank you for completing the survey\", \"shuffleQuestionOrder\": false}}")
+  sections           Json           @default("[]")
+  image_url          String?
+  total_responses    Decimal        @default(0) @db.Decimal
+  total_responses_ai Decimal        @default(0) @db.Decimal
+  responses          responses[]
+  profiles           profiles       @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "surveys_user_id_profiles_id_fk")
+}
+
+model subscription_plans {
+  id                 Int                  @id @default(autoincrement())
+  name               String
+  description        String?
+  price              Decimal              @db.Decimal
+  price_id           String               @default("free")
+  interval           String               @default("month")
+  features           Json                 @default("[]")
+  created_at         DateTime?            @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?            @default(now()) @db.Timestamp(6)
+  user_subscriptions user_subscriptions[]
+}
+
+model user_subscriptions {
+  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id            String             @db.Uuid
+  plan_id            Int
+  created_at         DateTime?          @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?          @default(now()) @db.Timestamp(6)
+  subscription_plans subscription_plans @relation(fields: [plan_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_subscriptions_plan_id_subscription_plans_id_fk")
+  profiles           profiles           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "user_subscriptions_user_id_profiles_id_fk")
 }
 
 enum survey_status {
