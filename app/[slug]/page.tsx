@@ -82,6 +82,7 @@ export default function ChatForm() {
 	const [dateValue, setDateValue] = useState<Date | undefined>(undefined);
 	const [textValue, setTextValue] = useState<string>('');
 	const [emailValue, setEmailValue] = useState<string>('');
+	const [collectEmailValue, setCollectEmailValue] = useState<string>('');
 	const [isFormComplete, setIsFormComplete] = useState<boolean>(false);
 	const [progress, setProgress] = useState<number>(0);
 	const [showSplash, setShowSplash] = useState<boolean>(true);
@@ -574,7 +575,10 @@ export default function ChatForm() {
 		const requiresEmail = survey?.settings?.responses?.collectEmail;
 
 		if (requiresEmail) {
-			if (!emailValue || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue)) {
+			if (
+				!collectEmailValue ||
+				!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(collectEmailValue)
+			) {
 				setValidationErrors((prev) => ({
 					...prev,
 					email: 'Please enter a valid email address.',
@@ -662,6 +666,7 @@ export default function ChatForm() {
 		setSubmissionError(null);
 
 		try {
+			console.log('Submitting responses:', emailValue);
 			const response = await fetch(`/api/surveys/${slug}`, {
 				method: 'POST',
 				headers: {
@@ -669,7 +674,7 @@ export default function ChatForm() {
 				},
 				body: JSON.stringify({
 					answers: formResponsesList,
-					email: emailValue || null,
+					email: collectEmailValue || emailValue || null,
 					conversationalAI: useConversationalAI,
 				}),
 			});
@@ -824,8 +829,10 @@ export default function ChatForm() {
 					showEmailInput={
 						survey?.settings?.responses?.collectEmail && !usageError
 					}
-					emailValue={emailValue}
-					onEmailChange={(e) => setEmailValue(e?.target?.value)}
+					emailValue={collectEmailValue}
+					onEmailChange={(e) => {
+						setCollectEmailValue(e?.target?.value);
+					}}
 					emailError={usageError ? usageError : validationErrors?.email}
 					// Disable button if error
 					buttonDisabled={!!usageError}
