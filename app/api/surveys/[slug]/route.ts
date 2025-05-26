@@ -94,7 +94,7 @@ export async function POST(request: Request) {
 		// Get the owner's subscription
 		const userSub = await prisma.user_subscriptions.findFirst({
 			where: { user_id: survey.user_id },
-			select: { plan_id: true },
+			select: { price_id: true },
 		});
 		// Get total AI responses for all surveys by this user
 		const allSurveys = await prisma.surveys.findMany({
@@ -108,11 +108,11 @@ export async function POST(request: Request) {
 		);
 
 		// Default to plan 1 if not found
-		const planId = userSub?.plan_id || 1;
+		const priceId = userSub?.price_id || 'free';
 
 		// Get the plan features
-		const plan = await prisma.subscription_plans.findUnique({
-			where: { id: +planId },
+		const plan = await prisma.subscription_prices.findUnique({
+			where: { id: priceId },
 			select: { features: true },
 		});
 
