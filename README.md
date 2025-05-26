@@ -21,4 +21,3 @@ Your project is live at:
 Continue building your app on:
 
 **[https://v0.dev/chat/projects/SSApeMcS69F](https://v0.dev/chat/projects/SSApeMcS69F)**
-
