@@ -81,8 +81,8 @@ export default function ChatForm() {
 	const [numberValue, setNumberValue] = useState<number[]>([5]);
 	const [dateValue, setDateValue] = useState<Date | undefined>(undefined);
 	const [textValue, setTextValue] = useState<string>('');
-	const [emailValue, setEmailValue] = useState<string>('');
 	const [collectEmailValue, setCollectEmailValue] = useState<string>('');
+	const [emailValue, setEmailValue] = useState<string>('');
 	const [isFormComplete, setIsFormComplete] = useState<boolean>(false);
 	const [progress, setProgress] = useState<number>(0);
 	const [showSplash, setShowSplash] = useState<boolean>(true);
@@ -116,6 +116,7 @@ export default function ChatForm() {
 	const [isThinking, setIsThinking] = useState<boolean>(false);
 	const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 	const [submissionError, setSubmissionError] = useState<string | null>(null);
+	const [logoRemoved, setLogoRemoved] = useState<boolean>(false);
 
 	const smartChat = useChat({
 		api: '/api/chat',
@@ -167,6 +168,9 @@ export default function ChatForm() {
 					if (data) {
 						setSurvey(data.survey);
 						const useAI = data.survey.settings?.presentation?.useAI;
+						const logoRemoved =
+							data.survey?.settings?.presentation?.removeLogo === true;
+						setLogoRemoved(logoRemoved);
 						setUseConversationalAI(useAI);
 						const showEmail =
 							data.survey.settings?.presentation?.showEmailField;
@@ -819,6 +823,7 @@ export default function ChatForm() {
 			{/* Show splash screen if showSplash is true */}
 			{!isSurveyLoading && !isUsageLoading && showSplash && !errorPage && (
 				<SplashScreen
+					logoRemoved={logoRemoved}
 					buttonText="Get Started"
 					onButtonClick={onGetStartedButton}
 					title={survey?.title || 'Survey Form'}
@@ -1045,9 +1050,11 @@ export default function ChatForm() {
 								<Send className="h-4 w-4" />
 							</Button>
 						</form>
-						<div className="text-xs text-gray-400 text-center mt-2 select-none">
-							Powered by <strong>SurveyGenius</strong>
-						</div>
+						{!logoRemoved && (
+							<div className="text-xs text-gray-400 text-center mt-2 select-none">
+								Powered by <strong>Form Genius</strong>
+							</div>
+						)}
 					</div>
 				</div>
 			)}

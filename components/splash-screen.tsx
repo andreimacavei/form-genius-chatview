@@ -5,6 +5,7 @@ import { ArrowRight } from 'lucide-react';
 
 interface SplashScreenProps {
 	buttonText: string;
+	logoRemoved: boolean;
 	onButtonClick: () => void;
 	title?: string;
 	description?: string;
@@ -17,6 +18,7 @@ interface SplashScreenProps {
 
 export default function SplashScreen({
 	buttonText,
+	logoRemoved,
 	onButtonClick,
 	title = 'Good afternoon!',
 	description = "Welcome! We're curious about your experience with AI tools for survey creation. You can create a survey form using our platform. We would love to hear your feedback on the process.",
@@ -27,7 +29,7 @@ export default function SplashScreen({
 	buttonDisabled = false,
 }: SplashScreenProps) {
 	return (
-		<div className="fixed inset-0 bg-white flex flex-col items-center justify-center p-6 z-50">
+		<div className="fixed inset-0 bg-white flex flex-col space-y-4 items-center justify-center p-6 z-50">
 			<div className="w-full max-w-md text-center">
 				<div className="relative h-40 mb-8">
 					<div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-20 bg-yellow-300 rotate-12 transform-gpu z-10"></div>
@@ -75,6 +77,11 @@ export default function SplashScreen({
 					<ArrowRight className="ml-2 h-5 w-5" />
 				</Button>
 			</div>
+			{!logoRemoved && (
+				<div className="text-xs text-gray-400 text-center mt-2 select-none">
+					Powered by <strong>Form Genius</strong>
+				</div>
+			)}
 		</div>
 	);
 }
