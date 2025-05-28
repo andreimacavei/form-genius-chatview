@@ -41,7 +41,7 @@ model surveys {
   user_id            String         @db.Uuid
   slug               String         @unique(map: "surveys_slug_unique")
   survey_questions   Json           @default("[]")
-  settings           Json           @default("{\"defaults\": {\"makeQuestionsRequiredByDefault\": true}, \"responses\": {\"collectEmail\": true, \"limitToOneResponse\": false, \"allowResponseEditing\": false}, \"presentation\": {\"useAI\": false, \"viewType\": \"stacked\", \"showEmailField\": true, \"showProgressBar\": true, \"confirmationMessage\": \"Thank you for completing the survey\", \"shuffleQuestionOrder\": false}}")
+  settings           Json           @default("{\"defaults\": {\"makeQuestionsRequiredByDefault\": true}, \"responses\": {\"collectEmail\": true, \"limitToOneResponse\": false, \"allowResponseEditing\": false}, \"presentation\": {\"useAI\": false, \"viewType\": \"stacked\", \"showEmailField\": false, \"showProgressBar\": true, \"confirmationMessage\": \"Thank you for completing the survey\", \"shuffleQuestionOrder\": false}}")
   sections           Json           @default("[]")
   image_url          String?
   total_responses    Decimal        @default(0) @db.Decimal
